@@ -1,0 +1,69 @@
+﻿@page "/"
+@using Common.Constants
+
+@inject AuthService AuthService
+
+<h3>Dashboard</h3>
+
+@if (!isLoggedIn)
+{
+    <p>You are not logged in.</p>
+
+    <p>
+        <a href="/login">Go to Login</a>
+    </p>
+}
+else
+{
+    <p>You are logged in as: <b>@role</b></p>
+
+    @if (role == UserRoleConstants.ADMIN_ROLE)
+    {
+        <h4>Admin actions</h4>
+
+        <p>
+            <a href="/create-worker">Create Worker</a>
+        </p>
+
+        <p>
+            <a href="/workers">Get Workers</a>
+        </p>
+
+        <p>
+            <a href="/requests">Get Requests / Assign Requests</a>
+        </p>
+    }
+
+    @if (role == UserRoleConstants.USER_ROLE)
+    {
+        <h4>User actions</h4>
+
+        <p>
+            <a href="/create-request">Create Request</a>
+        </p>
+
+        <p>
+            <a href="/requests">Get My Requests</a>
+        </p>
+    }
+
+    @if (role == UserRoleConstants.WORKER_ROLE)
+    {
+        <h4>Worker actions</h4>
+
+        <p>
+            <a href="/requests">Get Assigned Requests / Complete Requests</a>
+        </p>
+    }
+}
+
+@code {
+    private string? role;
+    private bool isLoggedIn;
+
+    protected override async Task OnInitializedAsync()
+    {
+        role = await AuthService.GetRoleAsync();
+        isLoggedIn = await AuthService.IsLoggedInAsync();
+    }
+}

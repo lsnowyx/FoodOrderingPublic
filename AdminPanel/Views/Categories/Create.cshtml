@@ -1,0 +1,28 @@
+@model AdminPanel.Models.Category.CategoryViewModel
+
+@{
+    ViewData["Title"] = "Create Category";
+}
+
+<h3>Create Category</h3>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div class="form-group">
+        @Html.LabelFor(m => m.Name)
+        @Html.TextBoxFor(m => m.Name, new { @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+    </div>
+    <div class="form-group">
+        @Html.LabelFor(m => m.Description)
+        @Html.TextAreaFor(m => m.Description, new { @class = "form-control", rows = 3 })
+        @Html.ValidationMessageFor(m => m.Description, "", new { @class = "text-danger" })
+    </div>
+    <div class="form-group">
+        @Html.LabelFor(m => m.ImageFile, "Image")
+        <input asp-for="ImageFile" type="file" class="form-control" accept="image/*" />
+        @Html.ValidationMessageFor(m => m.ImageFile, "", new { @class = "text-danger" })
+    </div>
+    <button class="btn btn-primary">Create</button>
+    <a class="btn btn-secondary" asp-action="Index">Cancel</a>
+</form>

@@ -1,0 +1,198 @@
+﻿@page "/reports"
+@using Common.Constants
+
+@inject AuthService AuthService
+@inject ApiService ApiService
+@inject IJSRuntime JSRuntime
+
+<h3>Admin Reports</h3>
+
+@if (!isLoggedIn)
+{
+    <div class="alert alert-danger">
+        You need to login first.
+    </div>
+}
+else if (role != UserRoleConstants.ADMIN_ROLE)
+{
+    <div class="alert alert-danger">
+        Only Admin can access this page.
+    </div>
+}
+else if (isLoading)
+{
+    <p>Loading report...</p>
+}
+else if (report is not null)
+{
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="LoadReportAsync">
+            Refresh Report
+        </button>
+
+        <button class="btn btn-outline-secondary ms-2"
+                @onclick="ExportPdfAsync"
+                disabled="@isExporting">
+            @(isExporting ? "Exporting..." : "Export to PDF")
+        </button>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h5>Total Requests</h5>
+                <h2>@report.TotalRequests</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h5>Completed Requests</h5>
+                <h2>@report.CompletedRequests</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h5>Completion Rate</h5>
+                <h2>@report.CompletionPercentage%</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h5>Pending Requests</h5>
+                <h2>@report.PendingRequests</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h5>Assigned Requests</h5>
+                <h2>@report.AssignedRequests</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h5>Unassigned Requests</h5>
+                <h2>@report.UnassignedRequests</h2>
+            </div>
+        </div>
+    </div>
+
+    <h4>Worker Workload</h4>
+
+    @if (report.Workers.Count == 0)
+    {
+        <div class="alert alert-info">
+            No worker data available.
+        </div>
+    }
+    else
+    {
+        <table class="table table-striped table-bordered align-middle">
+            <thead>
+                <tr>
+                    <th>Worker</th>
+                    <th>Total Assigned</th>
+                    <th>Completed</th>
+                    <th>Active</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var worker in report.Workers)
+                {
+                    <tr>
+                        <td>@worker.WorkerName</td>
+                        <td>@worker.TotalAssignedRequests</td>
+                        <td>@worker.CompletedRequests</td>
+                        <td>@worker.ActiveRequests</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert alert-success mt-3">@message</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger mt-3">@error</div>
+}
+
+@code {
+    private string? role;
+    private bool isLoggedIn;
+    private bool isLoading;
+    private bool isExporting;
+
+    private AdminReportResponse? report;
+
+    private string? message;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        role = await AuthService.GetRoleAsync();
+        isLoggedIn = await AuthService.IsLoggedInAsync();
+
+        if (isLoggedIn && role == UserRoleConstants.ADMIN_ROLE)
+        {
+            await LoadReportAsync();
+        }
+    }
+
+    private async Task LoadReportAsync()
+    {
+        message = null;
+        error = null;
+        isLoading = true;
+
+        try
+        {
+            report = await ApiService.GetAdminReportAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ExportPdfAsync()
+    {
+        message = null;
+        error = null;
+        isExporting = true;
+
+        try
+        {
+            var pdfBytes = await ApiService.ExportAdminReportPdfAsync();
+            var base64 = Convert.ToBase64String(pdfBytes);
+
+            await JSRuntime.InvokeVoidAsync(
+                "downloadFileFromBytes",
+                $"admin-report-{DateTime.Now:yyyyMMdd-HHmm}.pdf",
+                "application/pdf",
+                base64);
+
+            message = "PDF exported successfully.";
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            isExporting = false;
+        }
+    }
+}

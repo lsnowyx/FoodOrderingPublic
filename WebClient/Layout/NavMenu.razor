@@ -1,0 +1,91 @@
+﻿@using Common.Constants
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<nav>
+    <p>
+        <a href="/">Home</a>
+    </p>
+
+    @if (!isLoggedIn)
+    {
+        <p>
+            <a href="/login">Login</a>
+        </p>
+
+        <p>
+            <a href="/register">Register User</a>
+        </p>
+    }
+    else
+    {
+        <p>
+            <a href="/requests">Requests</a>
+        </p>
+
+        @if (role == UserRoleConstants.USER_ROLE)
+        {
+            <p>
+                <a href="/create-request">Create Request</a>
+            </p>
+        }
+
+        @if (role == UserRoleConstants.ADMIN_ROLE)
+        {
+            <p>
+                <a href="/workers">Workers</a>
+            </p>
+
+            <p>
+                <a href="/create-worker">Create Worker</a>
+            </p>
+
+            <p>
+                <a href="/reports">Reports</a>
+            </p>
+        }
+
+        <p>
+            Current role: <b>@role</b>
+        </p>
+
+        <button @onclick="LogoutAsync">Logout</button>
+    }
+</nav>
+
+@code {
+    private string? role;
+    private bool isLoggedIn;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthService.AuthChanged += OnAuthChanged;
+
+        await LoadAuthStateAsync();
+    }
+
+    private async void OnAuthChanged()
+    {
+        await LoadAuthStateAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAuthStateAsync()
+    {
+        role = await AuthService.GetRoleAsync();
+        isLoggedIn = await AuthService.IsLoggedInAsync();
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+
+        Navigation.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        AuthService.AuthChanged -= OnAuthChanged;
+    }
+}

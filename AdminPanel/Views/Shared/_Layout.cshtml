@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - AdminPanel</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/AdminPanel.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">AdminPanel</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        @if (!(User.Identity?.IsAuthenticated ?? false))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Auth" asp-action="Login">Login</a>
+                            </li>
+                        }
+                        else
+                        {
+                            @if (!User.IsInRole(UserRoleConstants.ORDER_MANAGER_ROLE)
+                                || User.IsInRole(UserRoleConstants.ADMIN_ROLE)
+                                || User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                                </li>
+                            }
+
+                            @if (User.IsInRole(UserRoleConstants.ADMIN_ROLE))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Accounts" asp-action="Create">Create Account</a>
+                                </li>
+                            }
+
+                            @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Categories" asp-action="Index">Categories</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Ingredients" asp-action="Index">Ingredients</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="MenuItems" asp-action="Index">Menu Items</a>
+                                </li>
+                            }
+
+                            @if (User.IsInRole(UserRoleConstants.ORDER_MANAGER_ROLE))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Orders" asp-action="Index">Orders</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Deliveries" asp-action="Index">Deliveries</a>
+                                </li>
+                            }
+
+                            <li class="nav-item">
+                                <form asp-controller="Auth" asp-action="Logout" method="post" class="form-inline">
+                                    <button type="submit" class="btn btn-link nav-link">Logout</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2026 - AdminPanel - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

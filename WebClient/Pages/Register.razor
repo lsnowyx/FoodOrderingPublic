@@ -1,0 +1,59 @@
+﻿@page "/register"
+
+@inject ApiService ApiService
+@inject NavigationManager Navigation
+
+<h3>Register User</h3>
+
+<div>
+    <label>Username</label>
+    <br />
+    <input @bind="request.UserName" />
+</div>
+
+<br />
+
+<div>
+    <label>Password</label>
+    <br />
+    <input type="password" @bind="request.Password" />
+</div>
+
+<br />
+
+<button @onclick="RegisterAsync">Create User</button>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p style="color:green">@message</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <p style="color:red">@error</p>
+}
+
+@code {
+    private CreateAccountRequest request = new();
+    private string? message;
+    private string? error;
+
+    private async Task RegisterAsync()
+    {
+        message = null;
+        error = null;
+
+        try
+        {
+            var result = await ApiService.CreateUserAsync(request);
+
+            message = $"User '{result.UserName}' created with role '{result.Role}'.";
+
+            request = new();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

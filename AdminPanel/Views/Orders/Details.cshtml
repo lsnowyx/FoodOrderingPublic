@@ -1,0 +1,67 @@
+@model AdminPanel.Models.Order.OrderViewModel
+
+@{
+    ViewData["Title"] = "Order Details";
+}
+
+<h3>Order Details</h3>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>Order @Model.Id</h5>
+        <p>
+            <strong>Customer:</strong> @Model.CustomerId<br />
+            <strong>Assigned At:</strong> @(Model.AssignedAt?.ToLocalTime().ToString("g") ?? "-")<br />
+            <strong>Order Date:</strong> @Model.OrderDate.ToLocalTime().ToString("g")<br />
+            <strong>Status:</strong> <span class="badge bg-secondary">@Model.Status</span><br />
+            <strong>Payment:</strong> @(Model.IsPaid ? "Paid" : "Unpaid")<br />
+            <strong>Delivery Address:</strong> @Model.DeliveryAddress<br />
+            <strong>Delivered At:</strong> @(Model.DeliveredAt?.ToLocalTime().ToString("g") ?? "-")
+        </p>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>Items</h5>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td>@item.MenuItemName</td>
+                    <td>@item.Quantity</td>
+                    <td>@item.UnitPrice.ToString("C")</td>
+                    <td>@item.LineTotal.ToString("C")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        <div class="mt-2">
+            <strong>Total:</strong> @Model.Total.ToString("C")
+        </div>
+    </div>
+</div>
+
+<p>
+    <a class="btn btn-secondary" asp-action="Index">Back to available orders</a>
+    <a class="btn btn-primary" asp-controller="Deliveries" asp-action="Index">Your Delivery</a>
+</p>

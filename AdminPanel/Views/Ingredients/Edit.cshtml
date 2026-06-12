@@ -1,0 +1,30 @@
+@model AdminPanel.Models.Ingredient.IngredientViewModel
+
+@{
+    ViewData["Title"] = "Edit Ingredient";
+}
+
+<h3>Edit Ingredient</h3>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Id)
+    <div class="form-group">
+        @Html.LabelFor(m => m.Name)
+        @Html.TextBoxFor(m => m.Name, new { @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+    </div>
+    <div class="form-group">
+        @Html.LabelFor(m => m.AllergenInfo)
+        @Html.TextAreaFor(m => m.AllergenInfo, new { @class = "form-control", rows = 3 })
+        @Html.ValidationMessageFor(m => m.AllergenInfo, "", new { @class = "text-danger" })
+    </div>
+    <div class="form-group">
+        @Html.LabelFor(m => m.CaloriesPerUnit)
+        @Html.TextBoxFor(m => m.CaloriesPerUnit, new { @class = "form-control", type = "number" })
+        @Html.ValidationMessageFor(m => m.CaloriesPerUnit, "", new { @class = "text-danger" })
+    </div>
+    <button class="btn btn-primary">Save</button>
+    <a class="btn btn-secondary" asp-action="Index">Cancel</a>
+}

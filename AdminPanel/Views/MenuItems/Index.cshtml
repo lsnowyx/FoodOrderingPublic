@@ -1,0 +1,61 @@
+@model IEnumerable<AdminPanel.Models.MenuItem.MenuItemViewModel>
+
+@{
+    ViewData["Title"] = "Menu Items";
+}
+
+<h3>Menu Items</h3>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<p>
+    @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+    {
+        <a class="btn btn-primary" asp-action="Create">Create Menu Item</a>
+    }
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Price</th>
+            <th>Category</th>
+            <th>Availability</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.Name</td>
+            <td>@item.Description</td>
+            <td>@item.Price.ToString("C")</td>
+            <td>@item.CategoryName</td>
+            <td>
+                @if (item.IsAvailable)
+                {
+                    <span class="badge bg-success">Available</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Unavailable</span>
+                }
+            </td>
+            <td>
+                <a class="btn btn-sm btn-info" asp-action="Details" asp-route-id="@item.Id">Details</a>
+                @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+                {
+                    <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@item.Id">Edit</a>
+                    <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                }
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

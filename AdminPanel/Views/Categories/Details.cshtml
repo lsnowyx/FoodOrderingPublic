@@ -1,0 +1,68 @@
+@model AdminPanel.Models.Category.CategoryDetailsViewModel
+
+@{
+    ViewData["Title"] = "Category Details";
+}
+
+<h3>@Model.Category.Name</h3>
+
+<dl class="row">
+    <dt class="col-sm-2">Description</dt>
+    <dd class="col-sm-10">@Model.Category.Description</dd>
+
+    <dt class="col-sm-2">Image</dt>
+    <dd class="col-sm-10">
+        @if (!string.IsNullOrWhiteSpace(Model.Category.ImageUrl))
+        {
+            <img src="@Model.Category.ImageUrl" alt="@Model.Category.Name" style="max-width:200px;" />
+        }
+    </dd>
+</dl>
+
+<a class="btn btn-secondary" asp-action="Index">Back</a>
+
+<h4 class="mt-4">Menu Items in this Category</h4>
+
+@if (Model.MenuItems != null && Model.MenuItems.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Availability</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var m in Model.MenuItems)
+        {
+            <tr>
+                <td>@m.Name</td>
+                <td>@m.Price.ToString("C")</td>
+                <td>
+                    @if (m.IsAvailable)
+                    {
+                        <span class="badge bg-success">Available</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Unavailable</span>
+                    }
+                </td>
+                <td>
+                    <a class="btn btn-sm btn-info" asp-controller="MenuItems" asp-action="Details" asp-route-id="@m.Id">Details</a>
+                    @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+                    {
+                        <a class="btn btn-sm btn-warning" asp-controller="MenuItems" asp-action="Edit" asp-route-id="@m.Id">Edit</a>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No menu items in this category or you may not have permission to view them.</p>
+}

@@ -1,0 +1,80 @@
+﻿@page "/workers"
+@using Common.Constants
+
+@inject AuthService AuthService
+@inject ApiService ApiService
+
+<h3>Workers</h3>
+
+@if (role != UserRoleConstants.ADMIN_ROLE)
+{
+    <p style="color:red">Only Admin can access this page.</p>
+}
+else
+{
+    <button @onclick="LoadWorkersAsync">Refresh Workers</button>
+
+    <br />
+    <br />
+
+    @if (workers.Count == 0)
+    {
+        <p>No workers found.</p>
+    }
+    else
+    {
+        <table border="1" cellpadding="8">
+            <thead>
+                <tr>
+                    <th>Worker Id</th>
+                    <th>Username</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var worker in workers)
+                {
+                    <tr>
+                        <td>@worker.Id</td>
+                        <td>@worker.UserName</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <p style="color:red">@error</p>
+}
+
+@code {
+    private string? role;
+    private List<GetWorkerResponse> workers = new();
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        role = await AuthService.GetRoleAsync();
+
+        if (role == UserRoleConstants.ADMIN_ROLE)
+        {
+            await LoadWorkersAsync();
+        }
+    }
+
+    private async Task LoadWorkersAsync()
+    {
+        error = null;
+
+        try
+        {
+            workers = await ApiService.GetWorkersAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

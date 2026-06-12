@@ -1,0 +1,26 @@
+@model AdminPanel.Models.MenuItem.MenuItemViewModel
+
+@{
+    ViewData["Title"] = "Delete Menu Item";
+}
+
+<h3>Delete Menu Item</h3>
+
+<div class="mb-3">
+    <strong>Name:</strong> @Model.Name
+</div>
+<div class="mb-3">
+    <strong>Category:</strong> @Model.CategoryName
+</div>
+<div class="mb-3">
+    <strong>Price:</strong> @Model.Price.ToString("C")
+</div>
+
+@using (Html.BeginForm("DeleteConfirmed", "MenuItems", FormMethod.Post))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Id)
+    <p>Are you sure you want to delete this menu item?</p>
+    <button class="btn btn-danger" type="submit">Delete</button>
+    <a class="btn btn-secondary" asp-action="Index">Cancel</a>
+}

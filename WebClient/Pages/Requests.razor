@@ -1,0 +1,223 @@
+﻿@page "/requests"
+@using Common.Constants
+
+@inject AuthService AuthService
+@inject ApiService ApiService
+
+<h3>Requests</h3>
+
+@if (!isLoggedIn)
+{
+    <p style="color:red">You need to login first.</p>
+}
+else
+{
+    <p>Current role: <b>@role</b></p>
+
+    <button @onclick="LoadDataAsync">Refresh Requests</button>
+
+    <br />
+    <br />
+
+    @if (requests.Count == 0)
+    {
+        <p>No requests found.</p>
+    }
+    else
+    {
+        <table border="1" cellpadding="8">
+            <thead>
+                <tr>
+                    @if (role != UserRoleConstants.USER_ROLE)
+                    {
+                        <th>Request Id</th>
+                    }
+
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Completed</th>
+                    <th>Client Name</th>
+                    <th>Worker Name</th>
+
+                    @if (role != UserRoleConstants.USER_ROLE)
+                    {
+                        <th>Client Id</th>
+                        <th>Worker Id</th>
+                        <th>Actions</th>
+                    }
+
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var request in requests)
+                {
+                    <tr>
+                        @if (role != UserRoleConstants.USER_ROLE)
+                        {
+                            <td>@request.Id</td>
+                        }
+
+                        <td>@request.Name</td>
+                        <td>@request.Description</td>
+                        <td>@request.Completed</td>
+                        <td>@request.ClientName</td>
+                        <td>@request.WorkerName</td>
+
+                        @if (role != UserRoleConstants.USER_ROLE)
+                        {
+                            <td>@request.ClientId</td>
+                            <td>@(request.WorkerId?.ToString() ?? "-")</td>
+                        }
+
+                        <td>
+                            @if (role == UserRoleConstants.ADMIN_ROLE)
+                            {
+                                <select value="@GetSelectedWorkerValue(request.Id)"
+                                        @onchange="@(e => SelectWorker(request.Id, e.Value?.ToString()))">
+                                    <option value="">Select worker</option>
+
+                                    @foreach (var worker in workers)
+                                    {
+                                        <option value="@worker.Id">@worker.UserName</option>
+                                    }
+                                </select>
+
+                                <button @onclick="() => AssignRequestAsync(request.Id)">
+                                    Assign
+                                </button>
+                            }
+
+                            @if (role == UserRoleConstants.WORKER_ROLE && !request.Completed)
+                            {
+                                <button @onclick="() => CompleteRequestAsync(request.Id)">
+                                    Complete
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p style="color:green">@message</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <p style="color:red">@error</p>
+}
+
+@code {
+    private string? role;
+    private bool isLoggedIn;
+
+    private List<GetRequestResponse> requests = new();
+    private List<GetWorkerResponse> workers = new();
+
+    private Dictionary<Guid, Guid> selectedWorkerIds = new();
+
+    private string? message;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        role = await AuthService.GetRoleAsync();
+        isLoggedIn = await AuthService.IsLoggedInAsync();
+
+        if (isLoggedIn)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        message = null;
+        error = null;
+
+        try
+        {
+            requests = await ApiService.GetRequestsAsync();
+
+            if (role == UserRoleConstants.ADMIN_ROLE)
+            {
+                workers = await ApiService.GetWorkersAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private string GetSelectedWorkerValue(Guid requestId)
+    {
+        if (selectedWorkerIds.TryGetValue(requestId, out var workerId))
+        {
+            return workerId.ToString();
+        }
+
+        return string.Empty;
+    }
+
+    private void SelectWorker(Guid requestId, string? value)
+    {
+        if (Guid.TryParse(value, out var workerId))
+        {
+            selectedWorkerIds[requestId] = workerId;
+        }
+        else
+        {
+            selectedWorkerIds.Remove(requestId);
+        }
+    }
+
+    private async Task AssignRequestAsync(Guid requestId)
+    {
+        message = null;
+        error = null;
+
+        if (!selectedWorkerIds.TryGetValue(requestId, out var workerId))
+        {
+            error = "Please select a worker first.";
+            return;
+        }
+
+        try
+        {
+            await ApiService.AssignRequestAsync(requestId, workerId);
+
+            message = "Request assigned successfully.";
+
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private async Task CompleteRequestAsync(Guid requestId)
+    {
+        message = null;
+        error = null;
+
+        try
+        {
+            await ApiService.CompleteRequestAsync(requestId);
+
+            message = "Request completed successfully.";
+
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

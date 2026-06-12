@@ -1,0 +1,51 @@
+@model IEnumerable<AdminPanel.Models.Category.CategoryViewModel>
+
+@{
+    ViewData["Title"] = "Categories";
+}
+
+<h3>Categories</h3>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+@if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+{
+    <a class="btn btn-primary mb-2" asp-action="Create">Create Category</a>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Image</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.Name</td>
+                <td>@c.Description</td>
+                <td>
+                    @if (!string.IsNullOrWhiteSpace(c.ImageUrl))
+                    {
+                        <img src="@c.ImageUrl" alt="@c.Name" style="max-width:100px;max-height:60px;" />
+                    }
+                </td>
+                <td>
+                    <a class="btn btn-sm btn-secondary" asp-action="Details" asp-route-id="@c.Id">Details</a>
+                    @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+                    {
+                        <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@c.Id">Edit</a>
+                        <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@c.Id">Delete</a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

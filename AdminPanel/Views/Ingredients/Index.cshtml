@@ -1,0 +1,46 @@
+@model IEnumerable<AdminPanel.Models.Ingredient.IngredientViewModel>
+
+@{
+    ViewData["Title"] = "Ingredients";
+}
+
+<h3>Ingredients</h3>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+@if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+{
+    <a class="btn btn-primary mb-2" asp-action="Create">Create Ingredient</a>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Allergen Info</th>
+            <th>Calories/Unit</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var i in Model)
+        {
+            <tr>
+                <td>@i.Name</td>
+                <td>@i.AllergenInfo</td>
+                <td>@i.CaloriesPerUnit</td>
+                <td>
+                    <a class="btn btn-sm btn-secondary" asp-action="Details" asp-route-id="@i.Id">Details</a>
+                    @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
+                    {
+                        <a class="btn btn-sm btn-primary" asp-action="Edit" asp-route-id="@i.Id">Edit</a>
+                        <a class="btn btn-sm btn-danger" asp-action="Delete" asp-route-id="@i.Id">Delete</a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

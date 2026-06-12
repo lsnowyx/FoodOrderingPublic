@@ -1,0 +1,120 @@
+@model AdminPanel.Models.Dashboard.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row">
+    <div class="col-12">
+        <h2>Welcome, @Model.UserName</h2>
+    </div>
+</div>
+
+@if (Model.IsMenuManager)
+{
+    <div class="row mt-3">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Categories</h5>
+                    <p class="card-text">Manage categories.</p>
+                    <a class="btn btn-primary" asp-controller="Categories" asp-action="Index">Go</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Ingredients</h5>
+                    <p class="card-text">Manage ingredients.</p>
+                    <a class="btn btn-primary" asp-controller="Ingredients" asp-action="Index">Go</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Menu Items</h5>
+                    <p class="card-text">Manage menu items.</p>
+                    <a class="btn btn-primary" asp-controller="MenuItems" asp-action="Index">Go</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Model.IsOrderManager)
+{
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Total Orders</h5>
+                    <p class="card-text">@Model.TotalOrders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Pending</h5>
+                    <p class="card-text">@Model.PendingOrders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Paid</h5>
+                    <p class="card-text">@Model.PaidOrders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Unpaid</h5>
+                    <p class="card-text">@Model.UnpaidOrders</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <h4>Recent Orders</h4>
+            @if (ViewData["ApiError"] != null)
+            {
+                <div class="alert alert-warning">@ViewData["ApiError"]</div>
+            }
+            else if (Model.RecentOrders?.Any() == true)
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Order Date</th>
+                            <th>Status</th>
+                            <th>Paid</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in Model.RecentOrders)
+                        {
+                            <tr>
+                                <td>@o.Id</td>
+                                <td>@o.OrderDate</td>
+                                <td>@o.Status</td>
+                                <td>@(o.IsPaid ? "Yes" : "No")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="alert alert-info">No recent orders available.</div>
+            }
+        </div>
+    </div>
+}

@@ -1,0 +1,49 @@
+﻿@page "/login"
+
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<h3>Login</h3>
+
+<div>
+    <label>Username</label>
+    <br />
+    <input @bind="loginRequest.Username" />
+</div>
+
+<br />
+
+<div>
+    <label>Password</label>
+    <br />
+    <input type="password" @bind="loginRequest.Password" />
+</div>
+
+<br />
+
+<button @onclick="LoginAsync">Login</button>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <p style="color:red">@error</p>
+}
+
+@code {
+    private LoginRequest loginRequest = new();
+    private string? error;
+
+    private async Task LoginAsync()
+    {
+        error = null;
+
+        var success = await AuthService.LoginAsync(loginRequest);
+
+        if (!success)
+        {
+            error = "Invalid username or password.";
+            return;
+        }
+
+        Navigation.NavigateTo("/");
+    }
+}

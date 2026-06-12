@@ -1,0 +1,94 @@
+@model IEnumerable<AdminPanel.Models.Order.OrderViewModel>
+
+@{
+    ViewData["Title"] = "Orders";
+}
+
+<h3>Orders</h3>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="status" class="form-select">
+            <option value="">All statuses</option>
+            <option>Pending</option>
+            <option>Paid</option>
+            <option>Preparing</option>
+            <option>OutForDelivery</option>
+            <option>Delivered</option>
+            <option>Cancelled</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="paid" class="form-select">
+            <option value="">Any payment</option>
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary">Filter</button>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Order Id</th>
+            <th>Customer</th>
+            <th>Order Date</th>
+            <th>Status</th>
+            <th>Payment</th>
+            <th>Delivery Address</th>
+            <th>Delivered At</th>
+            <th>Total</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var o in Model)
+    {
+        <tr>
+            <td>@o.Id</td>
+            <td>@o.CustomerId</td>
+            <td>@o.OrderDate.ToLocalTime().ToString("g")</td>
+            <td>
+                @switch (o.Status)
+                {
+                    case "Pending": <text><span class="badge bg-secondary">Pending</span></text>; break;
+                    case "Paid": <text><span class="badge bg-primary">Paid</span></text>; break;
+                    case "Preparing": <text><span class="badge bg-warning">Preparing</span></text>; break;
+                    case "OutForDelivery": <text><span class="badge bg-info">Out For Delivery</span></text>; break;
+                    case "Delivered": <text><span class="badge bg-success">Delivered</span></text>; break;
+                    case "Cancelled": <text><span class="badge bg-danger">Cancelled</span></text>; break;
+                    default: <text><span class="badge bg-secondary">@o.Status</span></text>; break;
+                }
+            </td>
+            <td>
+                @if (o.IsPaid)
+                {
+                    <span class="badge bg-primary">Paid</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Unpaid</span>
+                }
+            </td>
+            <td>@o.DeliveryAddress</td>
+            <td>@(o.DeliveredAt?.ToLocalTime().ToString("g") ?? "-")</td>
+            <td>@o.Total.ToString("C")</td>
+            <td>
+                <form asp-action="Take" method="post">
+                    <input type="hidden" name="id" value="@o.Id" />
+                    <button class="btn btn-sm btn-primary" type="submit">Take</button>
+                    @Html.AntiForgeryToken()
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
