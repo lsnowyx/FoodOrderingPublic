@@ -23,12 +23,13 @@ public class GetRequestCommandHandler : IRequestHandler<GetRequestCommand, List<
                 list = await requestsRepository.GetWithNoWorkerAsync(cancellationToken);
                 break;
             case UserRoleConstants.USER_ROLE:
-                list = await requestsRepository.GetByClientIdAsync(request.Id);
+                list = await requestsRepository.GetByClientIdAsync(request.Id, cancellationToken);
                 break;
             case UserRoleConstants.WORKER_ROLE:
-                list = await requestsRepository.GetByWorkerIdAsync(request.Id);
+                list = await requestsRepository.GetByWorkerIdAsync(request.Id, cancellationToken);
                 break;
-            default: throw new Exception("401");
+            default:
+                throw new UnauthorizedAccessException("Role cannot access requests.");
         }
         return list.Adapt<List<GetRequest3>>();
     }

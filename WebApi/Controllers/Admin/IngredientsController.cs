@@ -1,8 +1,10 @@
+using Application.DTOs.Common;
 using Application.DTOs.Ingredient;
 using Application.Features.Ingredient.Create;
 using Application.Features.Ingredient.Delete;
 using Application.Features.Ingredient.Get;
 using Application.Features.Ingredient.GetById;
+using Application.Features.Ingredient.Lookup;
 using Application.Features.Ingredient.Update;
 using Common.Constants;
 using Mapster;
@@ -14,6 +16,7 @@ namespace WebApi.Controllers.Admin;
 
 [Route("api/ingredients")]
 [ApiController]
+[Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
 public class IngredientsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -24,9 +27,34 @@ public class IngredientsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = PaginationParameters.DefaultPage,
+        [FromQuery] int pageSize = PaginationParameters.DefaultPageSize,
+        [FromQuery] string? searchTerm = null)
     {
-        var result = await _mediator.Send(new GetIngredientsQuery());
+        var result = await _mediator.Send(new GetIngredientsQuery
+        {
+            Page = page,
+            PageSize = pageSize,
+            SearchTerm = searchTerm
+        });
+
+        return Ok(result);
+    }
+
+    [HttpGet("lookup")]
+    public async Task<IActionResult> Lookup(
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] int page = PaginationParameters.DefaultPage,
+        [FromQuery] int pageSize = PaginationParameters.LookupPageSize)
+    {
+        var result = await _mediator.Send(new GetIngredientLookupQuery
+        {
+            SearchTerm = searchTerm,
+            Page = page,
+            PageSize = pageSize
+        });
+
         return Ok(result);
     }
 
@@ -39,7 +67,6 @@ public class IngredientsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
     public async Task<IActionResult> Create(CreateIngredientRequest request)
     {
         var cmd = request.Adapt<CreateIngredientCommand>();
@@ -48,7 +75,6 @@ public class IngredientsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
     public async Task<IActionResult> Update(Guid id, UpdateIngredientRequest request)
     {
         var cmd = request.Adapt<UpdateIngredientCommand>();
@@ -58,7 +84,6 @@ public class IngredientsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await _mediator.Send(new DeleteIngredientCommand { Id = id });

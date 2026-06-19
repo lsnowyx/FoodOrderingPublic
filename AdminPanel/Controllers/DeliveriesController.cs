@@ -1,72 +1,62 @@
+using AdminPanel.Models.Order;
 using AdminPanel.Services;
+using Application.Features.Order.GetMyDelivery;
+using Application.Features.Order.MarkDelivered;
+using Application.Features.Order.StartDelivery;
 using Common.Constants;
+using Common.Extensions;
+using Mapster;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminPanel.Controllers;
 
-[Authorize(Roles = UserRoleConstants.ORDER_MANAGER_ROLE)]
+[Authorize(AuthorizationPolicyConstants.ORDER_MANAGER_POLICY)]
 public class DeliveriesController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IMediator _mediator;
 
-    public DeliveriesController(IApiClient apiClient)
+    public DeliveriesController(IMediator mediator)
     {
-        _apiClient = apiClient;
+        _mediator = mediator;
     }
 
     public async Task<IActionResult> Index()
     {
-        try
+        var response = await _mediator.Send(new GetMyDeliveryQuery
         {
-            var order = await _apiClient.GetMyDeliveryAsync();
-            return View(order);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return View(null);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index", "Deliveries") });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
+            OrderManagerId = User.GetUserId()
+        });
+
+        return View(response?.Adapt<OrderViewModel>());
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> StartDelivery(Guid id)
     {
-        try
+        await _mediator.Send(new StartDeliveryCommand
         {
-            await _apiClient.StartDeliveryAsync(id);
-            TempData["Success"] = "Delivery started.";
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-        }
+            Id = id,
+            OrderManagerId = User.GetUserId()
+        });
 
-        return RedirectToAction("Index");
+        MvcErrorHelper.SetSuccessMessage(TempData, "Delivery started.");
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MarkDelivered(Guid id)
     {
-        try
+        await _mediator.Send(new MarkOrderDeliveredCommand
         {
-            await _apiClient.MarkDeliveredAsync(id);
-            TempData["Success"] = "Order marked as delivered.";
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-        }
+            Id = id,
+            OrderManagerId = User.GetUserId()
+        });
 
-        return RedirectToAction("Index");
+        MvcErrorHelper.SetSuccessMessage(TempData, "Order marked as delivered.");
+        return RedirectToAction(nameof(Index));
     }
 }

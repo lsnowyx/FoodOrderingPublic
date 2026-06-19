@@ -1,9 +1,11 @@
 ﻿using Application.Abstractions.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Application.Abstractions.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Persistence.Context;
 using Persistence.Repositories;
+using Persistence.Transactions;
 
 namespace Persistence.Extensions
 {
@@ -36,7 +38,9 @@ namespace Persistence.Extensions
             services.AddTransient<IMenuItemIngredientsRepository, MenuItemIngredientsRepository>();
             services.AddTransient<IMenuItemPicturesRepository, MenuItemPicturesRepository>();
             services.AddTransient<IOrdersRepository, OrdersRepository>();
+            services.AddTransient<IOrderTrackingLinksRepository, OrderTrackingLinksRepository>();
             services.AddTransient<IAuditLogRepository, AuditLogRepository>();
+            services.AddScoped<IApplicationTransaction, EfApplicationTransaction>();
             return services;
         }
     }

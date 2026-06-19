@@ -3,7 +3,9 @@ namespace AdminPanel.Models.Order;
 public class OrderViewModel
 {
     public Guid Id { get; set; }
-    public Guid CustomerId { get; set; }
+    public Guid? UserId { get; set; }
+    public Guid? GuestCustomerId { get; set; }
+    public Guid? CustomerId => UserId ?? GuestCustomerId;
     public Guid? AssignedOrderManagerId { get; set; }
     public DateTime? AssignedAt { get; set; }
     public DateTime OrderDate { get; set; }

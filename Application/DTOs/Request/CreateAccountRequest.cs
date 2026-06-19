@@ -1,3 +1,12 @@
-﻿namespace Application.DTOs.Request;
+using System.ComponentModel.DataAnnotations;
 
-public sealed record CreateAccountRequest(string UserName, string Password);
+namespace Application.DTOs.Request;
+
+public sealed record CreateAccountRequest(
+    [param: Required]
+    [param: StringLength(256, MinimumLength = 1)]
+    string UserName,
+
+    [param: Required]
+    [param: StringLength(256, MinimumLength = 1)]
+    string Password);

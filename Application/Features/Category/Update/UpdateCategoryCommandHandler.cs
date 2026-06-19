@@ -40,13 +40,30 @@ public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryComman
             }
             catch
             {
-                await _cloudinaryService.DeleteImageAsync(cloudinaryResponse.PublicId);
+                try
+                {
+                    await _cloudinaryService.DeleteImageAsync(
+                        cloudinaryResponse.PublicId,
+                        cancellationToken);
+                }
+                catch
+                {
+                    // Preserve the original persistence exception.
+                }
+
                 throw;
             }
 
             if (!string.IsNullOrWhiteSpace(oldPublicId))
             {
-                await _cloudinaryService.DeleteImageAsync(oldPublicId);
+                try
+                {
+                    await _cloudinaryService.DeleteImageAsync(oldPublicId, cancellationToken);
+                }
+                catch
+                {
+                    // The category already points to the new image.
+                }
             }
 
             return existing.Adapt<CategoryResponse>();

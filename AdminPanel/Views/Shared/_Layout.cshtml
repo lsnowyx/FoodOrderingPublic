@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/AdminPanel.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     <header>
@@ -78,6 +79,7 @@
         </nav>
     </header>
     <div class="container">
+        <partial name="_Alerts" />
         <main role="main" class="pb-3">
             @RenderBody()
         </main>

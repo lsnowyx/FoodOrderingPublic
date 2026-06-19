@@ -22,9 +22,10 @@ public class AccountsController : Controller
     }
     [HttpPost]
     [AllowAnonymous]
-    public async Task<IActionResult> Login(LoginCommand loginRequest)
+    public async Task<IActionResult> Login(LoginRequest loginRequest)
     {
-        LoginResponse result = await mediator.Send(loginRequest);
+        var command = loginRequest.Adapt<LoginCommand>();
+        LoginResponse result = await mediator.Send(command);
         return Ok(result);
     }
     [HttpPost]

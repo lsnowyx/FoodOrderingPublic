@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.DTOs.MenuItemPicture;
+using Mapster;
 using MediatR;
 
 namespace Application.Features.MenuItemPicture.Get;
@@ -16,6 +17,6 @@ public class GetMenuItemPicturesQueryHandler : IRequestHandler<GetMenuItemPictur
     public async Task<IEnumerable<MenuItemPictureResponse>> Handle(GetMenuItemPicturesQuery request, CancellationToken cancellationToken)
     {
         var list = await _repo.GetByMenuItemIdAsync(request.MenuItemId, cancellationToken);
-        return list.Select(p => new MenuItemPictureResponse(p.Id, p.MenuItemId, p.ImageUrl, p.Caption));
+        return list.Adapt<List<MenuItemPictureResponse>>();
     }
 }

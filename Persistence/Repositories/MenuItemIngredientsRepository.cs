@@ -20,9 +20,10 @@ public class MenuItemIngredientsRepository : IMenuItemIngredientsRepository
         return entity;
     }
 
-    public async Task DeleteAsync(MenuItemIngredient entity, CancellationToken cancellationToken = default)
+    public Task DeleteAsync(MenuItemIngredient entity, CancellationToken cancellationToken = default)
     {
         _context.MenuItemIngredients.Remove(entity);
+        return Task.CompletedTask;
     }
 
     public async Task<IEnumerable<MenuItemIngredient>> GetByMenuItemIdAsync(Guid menuItemId, CancellationToken cancellationToken = default)

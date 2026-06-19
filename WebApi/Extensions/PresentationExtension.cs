@@ -65,33 +65,6 @@ public static class PresentationExtension
             });
         });
 
-        services.AddAuthorization(options =>
-        {
-            //Admin
-            options.AddPolicy(AuthorizationPolicyConstants.ADMIN_POLICY,
-                policy => policy.RequireAuthenticatedUser()
-                .RequireClaim(JWTClaimsConstants.ROLE, UserRoleConstants.ADMIN_ROLE));
-            //User
-            options.AddPolicy(AuthorizationPolicyConstants.USER_POLICY,
-                policy => policy.RequireAuthenticatedUser()
-                .RequireClaim(JWTClaimsConstants.ROLE, UserRoleConstants.USER_ROLE));
-            //Worker
-            options.AddPolicy(AuthorizationPolicyConstants.WORKER_POLICY,
-                policy => policy.RequireAuthenticatedUser()
-                .RequireClaim(JWTClaimsConstants.ROLE, UserRoleConstants.WORKER_ROLE));
-
-            //Order Manager
-            options.AddPolicy(AuthorizationPolicyConstants.ORDER_MANAGER_POLICY,
-                policy => policy.RequireAuthenticatedUser()
-                .RequireClaim(JWTClaimsConstants.ROLE, UserRoleConstants.ORDER_MANAGER_ROLE));
-            //Menu Manager
-            options.AddPolicy(AuthorizationPolicyConstants.MENU_MANAGER_POLICY,
-                policy => policy.RequireAuthenticatedUser()
-                .RequireClaim(JWTClaimsConstants.ROLE, UserRoleConstants.MENU_MANAGER_ROLE));
-        });
-
-
-
         return services;
     }
 }

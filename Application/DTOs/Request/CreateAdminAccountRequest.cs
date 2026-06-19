@@ -18,12 +18,10 @@ public sealed record CreateAdminAccountRequest(
 {
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        var allowedRoles = new[] { UserRoleConstants.MENU_MANAGER_ROLE, UserRoleConstants.ORDER_MANAGER_ROLE };
-        
-        if (!allowedRoles.Contains(Role, StringComparer.OrdinalIgnoreCase))
+        if (!UserRoleConstants.ADMIN_CREATABLE_ROLES.Contains(Role, StringComparer.OrdinalIgnoreCase))
         {
             yield return new ValidationResult(
-                $"Only '{UserRoleConstants.MENU_MANAGER_ROLE}' and '{UserRoleConstants.ORDER_MANAGER_ROLE}' roles can be created. Received: {Role}",
+                $"Only '{UserRoleConstants.MENU_MANAGER_ROLE}' and '{UserRoleConstants.ORDER_MANAGER_ROLE}' roles can be created.",
                 new[] { nameof(Role) }
             );
         }

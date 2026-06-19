@@ -1,52 +1,64 @@
-using AdminPanel;
-using AdminPanel.Services;
+using AdminPanel.Constants;
+using AdminPanel.Filters;
+using Application.Extensions;
+using Common.Constants;
+using Infrastructure.Extensions;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
+using Persistence.Extensions;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<AdminPanelExceptionFilter>();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.AddService<AdminPanelExceptionFilter>();
+    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+});
+builder.Services.AddApplication(typeof(Program).Assembly);
+builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// configuration
-builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("ApiSettings"));
-
-// register HttpContextAccessor for ApiClient to access user claims
-builder.Services.AddHttpContextAccessor();
-
-// register named HttpClient for API with BaseAddress from config
-var apiBase = builder.Configuration.GetValue<string>("ApiSettings:BaseUrl") ?? "https://localhost:7057";
-builder.Services.AddHttpClient("ApiClient", client => client.BaseAddress = new Uri(apiBase))
-    .ConfigurePrimaryHttpMessageHandler(() =>
+// Cookie authentication remains the default authentication mechanism for MVC.
+builder.Services.AddAuthentication(options =>
     {
-        // In Development accept untrusted local certs to avoid SSL trust issues with localhost dev certificates.
-        if (builder.Environment.IsDevelopment())
-        {
-            return new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            };
-        }
-
-        return new HttpClientHandler();
-    });
-
-// register ApiClient
-builder.Services.AddScoped<IApiClient, ApiClient>();
-
-// Cookie authentication
-builder.Services.AddAuthentication("AdminCookie")
-    .AddCookie("AdminCookie", options =>
+        options.DefaultAuthenticateScheme = AdminAuthenticationConstants.CookieScheme;
+        options.DefaultChallengeScheme = AdminAuthenticationConstants.CookieScheme;
+        options.DefaultSignInScheme = AdminAuthenticationConstants.CookieScheme;
+    })
+    .AddCookie(AdminAuthenticationConstants.CookieScheme, options =>
     {
         options.LoginPath = "/Auth/Login";
         options.LogoutPath = "/Auth/Logout";
-        options.Cookie.Name = "AdminPanel.Auth";
+        options.AccessDeniedPath = "/Auth/AccessDenied";
+        options.Cookie.Name = AdminAuthenticationConstants.CookieName;
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(15);
+        options.SlidingExpiration = false;
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var role = context.Principal?.FindFirst(ClaimTypes.Role)?.Value;
+            var isAllowedStaffRole = role is not null
+                && UserRoleConstants.ADMIN_PANEL_ROLES.Contains(role, StringComparer.Ordinal);
+
+            if (!isAllowedStaffRole)
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(AdminAuthenticationConstants.CookieScheme);
+            }
+        };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddFoodOrderingAuthorization();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();

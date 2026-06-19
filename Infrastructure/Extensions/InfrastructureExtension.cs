@@ -18,17 +18,36 @@ public static class InfrastructureExtension
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddTransient<IAccountService, AccountService>();
-        services.AddTransient<IJwtBearerService, JwtBearerService>();
-        services.Configure<CloudinarySettings>(configuration.GetSection(nameof(CloudinarySettings)));
-
-        services.AddScoped<ICloudinaryService, CloudinaryService>();
-
-        AddIdentity(services, configuration);
-        AddJwtBearer(services, configuration);
+        services.AddInfrastructureServices(configuration);
+        services.AddJwtBearerInfrastructure(configuration);
         return services;
     }
-    private static IServiceCollection AddIdentity(this IServiceCollection services, IConfiguration configuration)
+
+    public static IServiceCollection AddInfrastructureServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddTransient<IAccountService, AccountService>();
+        services.AddScoped<IOrderCompletionService, OrderCompletionService>();
+        services.AddTransient<IJwtBearerService, JwtBearerService>();
+        services.AddTransient<IOrderTrackingTokenService, OrderTrackingTokenService>();
+        services.AddScoped<IMenuItemCostService, MenuItemCostService>();
+        services.Configure<JwtBearerOptions>(configuration.GetSection("JwtBearer"));
+        services.AddCloudinaryInfrastructure(configuration);
+        services.AddIdentityInfrastructure();
+        return services;
+    }
+
+    public static IServiceCollection AddCloudinaryInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.Configure<CloudinarySettings>(configuration.GetSection(nameof(CloudinarySettings)));
+        services.AddScoped<ICloudinaryService, CloudinaryService>();
+        return services;
+    }
+
+    public static IServiceCollection AddIdentityInfrastructure(this IServiceCollection services)
     {
         services.AddIdentityCore<User>(options =>
         {
@@ -47,7 +66,9 @@ public static class InfrastructureExtension
         return services;
     }
 
-    private static IServiceCollection AddJwtBearer(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddJwtBearerInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         var jwt = configuration.GetSection("JwtBearer").Get<JwtBearerOptions>()
           ?? throw new InvalidOperationException("JwtBearer configuration is missing.");
@@ -69,7 +90,6 @@ public static class InfrastructureExtension
                 };
                 options.MapInboundClaims = false;
             });
-        services.Configure<JwtBearerOptions>(configuration.GetSection("JwtBearer"));
         return services;
     }
 }

@@ -8,6 +8,8 @@ public sealed record MenuItemDetailsResponse(
     string Name,
     string? Description,
     decimal Price,
+    decimal RestaurantCost,
+    decimal TotalCalories,
     Guid CategoryId,
     string CategoryName,
     bool IsAvailable,

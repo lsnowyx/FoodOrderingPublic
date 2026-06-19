@@ -1,6 +1,12 @@
+using AdminPanel.Constants;
 using AdminPanel.Models.Auth;
-using AdminPanel.Services;
+using Application.DTOs.Request;
+using Application.Features.Account.Login;
+using Common.Constants;
+using Mapster;
+using MediatR;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -8,73 +14,98 @@ namespace AdminPanel.Controllers;
 
 public class AuthController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IMediator _mediator;
 
-    public AuthController(IApiClient apiClient)
+    public AuthController(IMediator mediator)
     {
-        _apiClient = apiClient;
+        _mediator = mediator;
     }
 
     [HttpGet]
-    public IActionResult Login(string returnUrl = null)
+    [AllowAnonymous]
+    public IActionResult Login(string? returnUrl = null)
     {
         return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
 
     [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
         if (!ModelState.IsValid)
+        {
             return View(model);
+        }
+
+        var request = model.Adapt<LoginRequest>();
+        if (!TryValidateModel(request))
+        {
+            return View(model);
+        }
 
         try
         {
-            var payload = new { Username = model.Username, Password = model.Password };
-            var resp = await _apiClient.PostAsync<object, LoginResponseModel>("api/Accounts/Login", payload);
-            if (resp == null || string.IsNullOrWhiteSpace(resp.JWT))
+            var command = request.Adapt<LoginCommand>();
+            var response = await _mediator.Send(command);
+
+            if (!IsAllowedStaffRole(response.Role))
             {
-                ModelState.AddModelError(string.Empty, "Invalid credentials");
+                ModelState.AddModelError(
+                    string.Empty,
+                    "This account is not permitted to access the AdminPanel.");
                 return View(model);
             }
 
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, model.Username ?? "Admin"),
-                new Claim("access_token", resp.JWT)
+                new(ClaimTypes.NameIdentifier, response.UserId.ToString()),
+                new(ClaimTypes.Name, request.Username),
+                new(ClaimTypes.Role, response.Role)
             };
 
-            if (!string.IsNullOrWhiteSpace(resp.Role))
-            {
-                claims.Add(new Claim(ClaimTypes.Role, resp.Role));
-            }
-
-            var identity = new ClaimsIdentity(claims, "AdminCookie");
+            var identity = new ClaimsIdentity(claims, AdminAuthenticationConstants.CookieScheme);
             var principal = new ClaimsPrincipal(identity);
 
-            await HttpContext.SignInAsync("AdminCookie", principal);
+            await HttpContext.SignInAsync(AdminAuthenticationConstants.CookieScheme, principal);
 
-            if (!string.IsNullOrWhiteSpace(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
+            if (!string.IsNullOrWhiteSpace(model.ReturnUrl)
+                && Url.IsLocalUrl(model.ReturnUrl))
+            {
                 return Redirect(model.ReturnUrl);
+            }
 
-            return RedirectToAction("Index", "Dashboard");
+            return RedirectToAction(nameof(DashboardController.Index), "Dashboard");
         }
-        catch
+        catch (UnauthorizedAccessException)
         {
-            ModelState.AddModelError(string.Empty, "Login failed");
+            ModelState.AddModelError(string.Empty, "Invalid username or password.");
+            return View(model);
+        }
+        catch (InvalidOperationException exception)
+        {
+            ModelState.AddModelError(string.Empty, exception.Message);
             return View(model);
         }
     }
 
     [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
-        await HttpContext.SignOutAsync("AdminCookie");
-        return RedirectToAction("Login");
+        await HttpContext.SignOutAsync(AdminAuthenticationConstants.CookieScheme);
+        return RedirectToAction(nameof(Login));
     }
 
     [HttpGet]
     public IActionResult AccessDenied()
     {
         return View();
+    }
+
+    private static bool IsAllowedStaffRole(string role)
+    {
+        return UserRoleConstants.ADMIN_PANEL_ROLES.Contains(role, StringComparer.Ordinal);
     }
 }

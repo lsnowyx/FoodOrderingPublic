@@ -9,6 +9,11 @@ public class Ingredient
     [Required]
     public string Name { get; set; } = null!;
 
+    [Required]
+    public string BaseUnit { get; set; } = null!;
+
+    public decimal UnitCost { get; set; }
+
     public string? AllergenInfo { get; set; }
 
     public int? CaloriesPerUnit { get; set; }

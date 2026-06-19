@@ -18,17 +18,18 @@ public class AssignRequestCommandHandler : IRequestHandler<AssignRequestCommand,
     }
     public async Task<AssignRequestResponse> Handle(AssignRequestCommand request, CancellationToken cancellationToken)
     {
-        var temp = await requestsRepository.GetByIdAsync(request.requestId);
+        var temp = await requestsRepository.GetByIdAsync(request.requestId, cancellationToken);
 
-        if (temp == null) throw new Exception("request doesn't exist");
+        if (temp == null) throw new KeyNotFoundException("Request does not exist.");
 
-        if (temp.WorkerId != null) throw new Exception("Already occupied");
+        if (temp.WorkerId != null) throw new InvalidOperationException("Request is already assigned.");
 
-        if (!await accountService.IsWorker(request.workerId)) throw new Exception("user is not worker");
+        if (!await accountService.IsWorker(request.workerId))
+            throw new ArgumentException("Selected user is not a worker.");
 
         temp.WorkerId = request.workerId;
 
-        await requestsRepository.SaveChangesAsync();
+        await requestsRepository.SaveChangesAsync(cancellationToken);
         return request.Adapt<AssignRequestResponse>();
     }
 }

@@ -1,6 +1,7 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
 using Application.DTOs.MenuItemPicture;
+using Mapster;
 using MediatR;
 
 namespace Application.Features.MenuItemPicture.Update;
@@ -42,15 +43,32 @@ public class UpdateMenuItemPictureCommandHandler : IRequestHandler<UpdateMenuIte
         }
         catch
         {
-            await cloudinaryService.DeleteImageAsync(cloudinaryResponse.PublicId);
+            try
+            {
+                await cloudinaryService.DeleteImageAsync(
+                    cloudinaryResponse.PublicId,
+                    cancellationToken);
+            }
+            catch
+            {
+                // Preserve the original persistence exception.
+            }
+
             throw;
         }
 
         if (!string.IsNullOrWhiteSpace(oldPublicId))
         {
-            await cloudinaryService.DeleteImageAsync(oldPublicId);
+            try
+            {
+                await cloudinaryService.DeleteImageAsync(oldPublicId, cancellationToken);
+            }
+            catch
+            {
+                // The picture already points to the new image.
+            }
         }
 
-        return new MenuItemPictureResponse(pic.Id, pic.MenuItemId, pic.ImageUrl, pic.Caption);
+        return pic.Adapt<MenuItemPictureResponse>();
     }
 }

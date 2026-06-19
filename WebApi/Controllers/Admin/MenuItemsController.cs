@@ -1,3 +1,4 @@
+using Application.DTOs.Common;
 using Application.DTOs.MenuItem;
 using Application.Features.MenuItem.Create;
 using Application.Features.MenuItem.Delete;
@@ -14,6 +15,7 @@ namespace WebApi.Controllers.Admin;
 
 [Route("api/menu-items")]
 [ApiController]
+[Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
 public class MenuItemsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -24,9 +26,22 @@ public class MenuItemsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = PaginationParameters.DefaultPage,
+        [FromQuery] int pageSize = PaginationParameters.DefaultPageSize,
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] Guid? categoryId = null,
+        [FromQuery] bool? isAvailable = null)
     {
-        var result = await _mediator.Send(new GetMenuItemsQuery());
+        var result = await _mediator.Send(new GetMenuItemsQuery
+        {
+            Page = page,
+            PageSize = pageSize,
+            SearchTerm = searchTerm,
+            CategoryId = categoryId,
+            IsAvailable = isAvailable
+        });
+
         return Ok(result);
     }
 
@@ -39,7 +54,6 @@ public class MenuItemsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
     public async Task<IActionResult> Create(CreateMenuItemRequest request)
     {
         var cmd = request.Adapt<CreateMenuItemCommand>();
@@ -48,7 +62,6 @@ public class MenuItemsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
     public async Task<IActionResult> Update(Guid id, UpdateMenuItemRequest request)
     {
         var cmd = request.Adapt<UpdateMenuItemCommand>();
@@ -58,7 +71,6 @@ public class MenuItemsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await _mediator.Send(new DeleteMenuItemCommand { Id = id });

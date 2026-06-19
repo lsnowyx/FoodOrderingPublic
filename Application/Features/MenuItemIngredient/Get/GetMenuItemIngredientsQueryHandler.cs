@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.DTOs.MenuItemIngredient;
+using Mapster;
 using MediatR;
 
 namespace Application.Features.MenuItemIngredient.Get;
@@ -16,6 +17,6 @@ public class GetMenuItemIngredientsQueryHandler : IRequestHandler<GetMenuItemIng
     public async Task<IEnumerable<MenuItemIngredientResponse>> Handle(GetMenuItemIngredientsQuery request, CancellationToken cancellationToken)
     {
         var list = await _repo.GetByMenuItemIdAsync(request.MenuItemId, cancellationToken);
-        return list.Select(mi => new MenuItemIngredientResponse(mi.Id, mi.IngredientId, mi.Ingredient?.Name ?? string.Empty, mi.Ingredient?.AllergenInfo ?? string.Empty, mi.Ingredient?.CaloriesPerUnit ?? 0, mi.Quantity ?? string.Empty));
+        return list.Adapt<List<MenuItemIngredientResponse>>();
     }
 }

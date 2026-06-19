@@ -25,7 +25,6 @@ public class AdjustOrderItemsCommandHandler : IRequestHandler<AdjustOrderItemsCo
         {
             var orderItem = order.OrderItems.FirstOrDefault(oi => oi.Id == item.ItemId);
             if (orderItem == null) throw new KeyNotFoundException($"Order item {item.ItemId} not found");
-            if (item.Quantity <= 0) throw new ArgumentException("Quantity must be greater than zero");
             orderItem.Quantity = item.Quantity;
         }
 

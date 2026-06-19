@@ -1,11 +1,12 @@
 using Application.Abstractions.Repositories;
 using Application.DTOs.Ingredient;
+using Application.DTOs.Common;
 using Mapster;
 using MediatR;
 
 namespace Application.Features.Ingredient.Get;
 
-public class GetIngredientsQueryHandler : IRequestHandler<GetIngredientsQuery, IEnumerable<IngredientResponse>>
+public class GetIngredientsQueryHandler : IRequestHandler<GetIngredientsQuery, PaginatedResponse<IngredientResponse>>
 {
     private readonly IIngredientsRepository _repo;
 
@@ -14,9 +15,18 @@ public class GetIngredientsQueryHandler : IRequestHandler<GetIngredientsQuery, I
         _repo = repo;
     }
 
-    public async Task<IEnumerable<IngredientResponse>> Handle(GetIngredientsQuery request, CancellationToken cancellationToken)
+    public async Task<PaginatedResponse<IngredientResponse>> Handle(GetIngredientsQuery request, CancellationToken cancellationToken)
     {
-        var all = await _repo.GetAllAsync(cancellationToken);
-        return all.Select(i => i.Adapt<IngredientResponse>());
+        var pagination = PaginationParameters.Create(request.Page, request.PageSize);
+
+        var totalCount = await _repo.CountAsync(request.SearchTerm, cancellationToken);
+        var ingredients = await _repo.GetPagedAsync(
+            pagination.Skip,
+            pagination.PageSize,
+            request.SearchTerm,
+            cancellationToken);
+        var items = ingredients.Adapt<List<IngredientResponse>>();
+
+        return PaginatedResponse<IngredientResponse>.Create(pagination, totalCount, items);
     }
 }

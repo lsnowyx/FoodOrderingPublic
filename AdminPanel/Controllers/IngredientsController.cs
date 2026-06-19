@@ -1,151 +1,139 @@
 using AdminPanel.Models.Ingredient;
 using AdminPanel.Services;
+using Application.DTOs.Common;
+using Application.DTOs.Ingredient;
+using Application.Features.Ingredient.Create;
+using Application.Features.Ingredient.Delete;
+using Application.Features.Ingredient.Get;
+using Application.Features.Ingredient.GetById;
+using Application.Features.Ingredient.Update;
 using Common.Constants;
+using Mapster;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminPanel.Controllers;
 
-[Authorize]
+[Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
 public class IngredientsController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IMediator _mediator;
 
-    public IngredientsController(IApiClient apiClient)
+    public IngredientsController(IMediator mediator)
     {
-        _apiClient = apiClient;
+        _mediator = mediator;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        int page = PaginationParameters.DefaultPage,
+        int pageSize = PaginationParameters.DefaultPageSize,
+        string? searchTerm = null)
     {
-        try
+        var model = new IngredientIndexViewModel
         {
-            var list = await _apiClient.GetAsync<IEnumerable<IngredientViewModel>>("api/ingredients");
-            return View(list ?? Enumerable.Empty<IngredientViewModel>());
-        }
-        catch (UnauthorizedAccessException)
+            SearchTerm = searchTerm
+        };
+
+        var response = await _mediator.Send(new GetIngredientsQuery
         {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index", "Ingredients") });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return View(Enumerable.Empty<IngredientViewModel>());
-        }
+            Page = page,
+            PageSize = pageSize,
+            SearchTerm = searchTerm
+        });
+
+        model.Ingredients = response.Adapt<AdminPanel.Models.Common.PaginatedViewModel<IngredientViewModel>>();
+
+        return View(model);
     }
 
     public async Task<IActionResult> Details(Guid id)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<IngredientViewModel>($"api/ingredients/{id}");
-            if (item == null) return NotFound();
-            return View(item);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        var response = await _mediator.Send(new GetIngredientByIdQuery { Id = id });
+        if (response is null) return NotFound();
+
+        return View(response.Adapt<IngredientViewModel>());
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public IActionResult Create()
     {
         return View(new IngredientViewModel());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Create(IngredientViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
+
+        var request = model.Adapt<CreateIngredientRequest>();
+        if (!TryValidateModel(request)) return View(model);
+
         try
         {
-            var payload = new { name = model.Name, allergenInfo = model.AllergenInfo, caloriesPerUnit = model.CaloriesPerUnit };
-            var created = await _apiClient.PostAsync<object, IngredientViewModel>("api/ingredients", payload);
-            return RedirectToAction("Index");
+            var command = request.Adapt<CreateIngredientCommand>();
+            await _mediator.Send(command);
+            MvcErrorHelper.SetSuccessMessage(TempData, "Ingredient created.");
+            return RedirectToAction(nameof(Index));
         }
-        catch (ApiException ex)
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
         {
-            ApiErrorHelper.AddErrorsToModelState(ModelState, ex.Content);
+            MvcErrorHelper.AddToModelState(ModelState, exception);
             return View(model);
         }
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<IngredientViewModel>($"api/ingredients/{id}");
-            if (item == null) return NotFound();
-            return View(item);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        var response = await _mediator.Send(new GetIngredientByIdQuery { Id = id });
+        if (response is null) return NotFound();
+
+        return View(response.Adapt<IngredientViewModel>());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Edit(Guid id, IngredientViewModel model)
     {
+        model.Id = id;
         if (!ModelState.IsValid) return View(model);
+
+        var request = model.Adapt<UpdateIngredientRequest>();
+        if (!TryValidateModel(request)) return View(model);
+
         try
         {
-            var payload = new { name = model.Name, allergenInfo = model.AllergenInfo, caloriesPerUnit = model.CaloriesPerUnit };
-            var updated = await _apiClient.PutAsync<object, IngredientViewModel>($"api/ingredients/{id}", payload);
-            return RedirectToAction("Index");
+            var command = request.Adapt<UpdateIngredientCommand>();
+            command.Id = id;
+            await _mediator.Send(command);
+            MvcErrorHelper.SetSuccessMessage(TempData, "Ingredient updated.");
+            return RedirectToAction(nameof(Index));
         }
-        catch (ApiException ex)
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
         {
-            ApiErrorHelper.AddErrorsToModelState(ModelState, ex.Content);
+            MvcErrorHelper.AddToModelState(ModelState, exception);
             return View(model);
         }
     }
 
-    [Authorize(Roles = "MenuManager")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<IngredientViewModel>($"api/ingredients/{id}");
-            if (item == null) return NotFound();
-            return View(item);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        var response = await _mediator.Send(new GetIngredientByIdQuery { Id = id });
+        if (response is null) return NotFound();
+
+        return View(response.Adapt<IngredientViewModel>());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> DeleteConfirmed(Guid id)
     {
-        try
+        OperationResponse response = await _mediator.Send(new DeleteIngredientCommand { Id = id });
+        if (!response.Success)
         {
-            await _apiClient.DeleteAsync($"api/ingredients/{id}");
-            return RedirectToAction("Index");
+            MvcErrorHelper.SetErrorMessage(TempData, response.Message);
+            return RedirectToAction(nameof(Delete), new { id });
         }
-        catch (ApiException ex)
-        {
-            // if delete fails because of FK constraints, show friendly message
-            if (ex.Content != null && ex.Content.Contains("used by") || ex.Content.Contains("constraint", StringComparison.OrdinalIgnoreCase))
-            {
-                TempData["Error"] = "Ingredient cannot be deleted because it is used by existing menu items.";
-            }
-            else
-            {
-                TempData["Error"] = ex.Content ?? "Failed to delete ingredient.";
-            }
-            return RedirectToAction("Delete", new { id });
-        }
+
+        MvcErrorHelper.SetSuccessMessage(TempData, response.Message);
+        return RedirectToAction(nameof(Index));
     }
 }
 

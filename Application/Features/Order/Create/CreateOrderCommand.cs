@@ -6,7 +6,7 @@ namespace Application.Features.Order.Create;
 
 public sealed class CreateOrderCommand : IRequest<Application.DTOs.Order.OrderResponse>
 {
-    public Guid CustomerId { get; set; }
+    public Guid? UserId { get; set; }
 
     [Required]
     public string DeliveryAddress { get; set; } = null!;

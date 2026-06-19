@@ -6,15 +6,6 @@
 
 <h3>Order Details</h3>
 
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success">@TempData["Success"]</div>
-}
-
 <div class="card mb-3">
     <div class="card-body">
         <h5>Order @Model.Id</h5>

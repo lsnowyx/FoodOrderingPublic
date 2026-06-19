@@ -13,6 +13,10 @@ public class MenuItem
 
     public decimal Price { get; set; }
 
+    public decimal RestaurantCost { get; set; }
+
+    public decimal TotalCalories { get; set; }
+
     public Guid CategoryId { get; set; }
     public Category Category { get; set; } = null!;
 

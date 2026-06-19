@@ -1,33 +1,39 @@
-@model IEnumerable<AdminPanel.Models.Order.OrderViewModel>
+@using Common.Enums
+@model AdminPanel.Models.Order.OrderIndexViewModel
 
 @{
     ViewData["Title"] = "Orders";
+    var orders = Model.Orders;
+    var previousPage = orders.Page - 1;
+    var nextPage = orders.Page + 1;
 }
 
 <h3>Orders</h3>
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
 
 <form method="get" class="row g-2 mb-3">
     <div class="col-auto">
         <select name="status" class="form-select">
             <option value="">All statuses</option>
-            <option>Pending</option>
-            <option>Paid</option>
-            <option>Preparing</option>
-            <option>OutForDelivery</option>
-            <option>Delivered</option>
-            <option>Cancelled</option>
+            <option value="@OrderStatus.Pending" selected="@(Model.Status == OrderStatus.Pending)">Pending</option>
+            <option value="@OrderStatus.Paid" selected="@(Model.Status == OrderStatus.Paid)">Paid</option>
+            <option value="@OrderStatus.Preparing" selected="@(Model.Status == OrderStatus.Preparing)">Preparing</option>
+            <option value="@OrderStatus.OutForDelivery" selected="@(Model.Status == OrderStatus.OutForDelivery)">Out For Delivery</option>
+            <option value="@OrderStatus.Delivered" selected="@(Model.Status == OrderStatus.Delivered)">Delivered</option>
+            <option value="@OrderStatus.Cancelled" selected="@(Model.Status == OrderStatus.Cancelled)">Cancelled</option>
         </select>
     </div>
     <div class="col-auto">
-        <select name="paid" class="form-select">
+        <select name="isPaid" class="form-select">
             <option value="">Any payment</option>
-            <option value="paid">Paid</option>
-            <option value="unpaid">Unpaid</option>
+            <option value="true" selected="@(Model.IsPaid == true)">Paid</option>
+            <option value="false" selected="@(Model.IsPaid == false)">Unpaid</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="pageSize" class="form-select">
+            <option value="12" selected="@(orders.PageSize == 12)">12</option>
+            <option value="25" selected="@(orders.PageSize == 25)">25</option>
+            <option value="50" selected="@(orders.PageSize == 50)">50</option>
         </select>
     </div>
     <div class="col-auto">
@@ -50,7 +56,13 @@
         </tr>
     </thead>
     <tbody>
-    @foreach (var o in Model)
+    @if (orders.Items.Count == 0)
+    {
+        <tr>
+            <td colspan="9" class="text-muted">No available orders found.</td>
+        </tr>
+    }
+    @foreach (var o in orders.Items)
     {
         <tr>
             <td>@o.Id</td>
@@ -59,12 +71,12 @@
             <td>
                 @switch (o.Status)
                 {
-                    case "Pending": <text><span class="badge bg-secondary">Pending</span></text>; break;
-                    case "Paid": <text><span class="badge bg-primary">Paid</span></text>; break;
-                    case "Preparing": <text><span class="badge bg-warning">Preparing</span></text>; break;
-                    case "OutForDelivery": <text><span class="badge bg-info">Out For Delivery</span></text>; break;
-                    case "Delivered": <text><span class="badge bg-success">Delivered</span></text>; break;
-                    case "Cancelled": <text><span class="badge bg-danger">Cancelled</span></text>; break;
+                    case nameof(OrderStatus.Pending): <text><span class="badge bg-secondary">Pending</span></text>; break;
+                    case nameof(OrderStatus.Paid): <text><span class="badge bg-primary">Paid</span></text>; break;
+                    case nameof(OrderStatus.Preparing): <text><span class="badge bg-warning">Preparing</span></text>; break;
+                    case nameof(OrderStatus.OutForDelivery): <text><span class="badge bg-info">Out For Delivery</span></text>; break;
+                    case nameof(OrderStatus.Delivered): <text><span class="badge bg-success">Delivered</span></text>; break;
+                    case nameof(OrderStatus.Cancelled): <text><span class="badge bg-danger">Cancelled</span></text>; break;
                     default: <text><span class="badge bg-secondary">@o.Status</span></text>; break;
                 }
             </td>
@@ -92,3 +104,35 @@
     }
     </tbody>
 </table>
+
+@if (orders.TotalPages > 0)
+{
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="text-muted">
+            Showing page @orders.Page of @orders.TotalPages (@orders.TotalCount total)
+        </div>
+        <nav aria-label="Orders pagination">
+            <ul class="pagination mb-0">
+                <li class="page-item @(orders.HasPreviousPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-page="@previousPage"
+                       asp-route-pageSize="@orders.PageSize"
+                       asp-route-status="@Model.Status"
+                       asp-route-isPaid="@Model.IsPaid">Previous</a>
+                </li>
+                <li class="page-item active">
+                    <span class="page-link">@orders.Page</span>
+                </li>
+                <li class="page-item @(orders.HasNextPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-page="@nextPage"
+                       asp-route-pageSize="@orders.PageSize"
+                       asp-route-status="@Model.Status"
+                       asp-route-isPaid="@Model.IsPaid">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}

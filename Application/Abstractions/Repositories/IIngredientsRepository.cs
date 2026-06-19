@@ -10,6 +10,8 @@ public interface IIngredientsRepository
     // READ
     Task<Ingredient?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IEnumerable<Ingredient>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Ingredient>> GetPagedAsync(int skip, int take, string? searchTerm, CancellationToken cancellationToken = default);
+    Task<int> CountAsync(string? searchTerm, CancellationToken cancellationToken = default);
 
     // UPDATE
     Task UpdateAsync(Ingredient ingredient, CancellationToken cancellationToken = default);

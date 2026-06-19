@@ -17,6 +17,7 @@ public class CreateIngredientCommandHandler : IRequestHandler<CreateIngredientCo
     public async Task<IngredientResponse> Handle(CreateIngredientCommand request, CancellationToken cancellationToken)
     {
         var toAdd = request.Adapt<Domain.Entities.Ingredient>();
+        toAdd.BaseUnit = request.BaseUnit.Trim();
         await _repo.AddAsync(toAdd, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
         return toAdd.Adapt<IngredientResponse>();

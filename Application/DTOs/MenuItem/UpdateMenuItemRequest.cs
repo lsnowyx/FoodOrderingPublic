@@ -16,4 +16,15 @@ public sealed record UpdateMenuItemRequest(
     Guid CategoryId,
 
     bool IsAvailable = true
-);
+) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (CategoryId == Guid.Empty)
+        {
+            yield return new ValidationResult(
+                "Category is required.",
+                new[] { nameof(CategoryId) });
+        }
+    }
+}

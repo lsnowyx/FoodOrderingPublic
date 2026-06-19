@@ -14,11 +14,11 @@ namespace WebApi.Controllers.Admin;
 [Route("api/menu-items/{menuItemId:guid}/pictures")]
 [ApiController]
 [Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
-public class PicturesController : ControllerBase
+public class MenuItemPicturesController : ControllerBase
 {
     private readonly IMediator _mediator;
 
-    public PicturesController(IMediator mediator)
+    public MenuItemPicturesController(IMediator mediator)
     {
         _mediator = mediator;
     }

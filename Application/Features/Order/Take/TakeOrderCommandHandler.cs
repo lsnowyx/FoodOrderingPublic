@@ -16,22 +16,48 @@ public class TakeOrderCommandHandler : IRequestHandler<TakeOrderCommand, OrderRe
 
     public async Task<OrderResponse> Handle(TakeOrderCommand request, CancellationToken cancellationToken)
     {
-        var active = await _repo.GetActiveAssignedToOrderManagerAsync(request.OrderManagerId, cancellationToken);
-        if (active != null) throw new InvalidOperationException("You already have an active delivery.");
+        var assigned = await _repo.TryAssignAsync(
+            request.OrderId,
+            request.OrderManagerId,
+            DateTime.UtcNow,
+            cancellationToken);
 
-        var order = await _repo.GetByIdAsync(request.OrderId, cancellationToken);
-        if (order == null) throw new KeyNotFoundException("Order not found");
+        if (!assigned)
+        {
+            var active = await _repo.GetActiveAssignedToOrderManagerAsync(
+                request.OrderManagerId,
+                cancellationToken);
+            if (active is not null)
+            {
+                throw new InvalidOperationException("You already have an active delivery.");
+            }
 
-        if (order.AssignedOrderManagerId != null) throw new InvalidOperationException("Order is already assigned.");
-        if (order.Status == OrderStatus.Delivered) throw new InvalidOperationException("Delivered orders cannot be taken.");
-        if (order.Status == OrderStatus.Cancelled) throw new InvalidOperationException("Cancelled orders cannot be taken.");
+            var unavailableOrder = await _repo.GetByIdAsync(request.OrderId, cancellationToken);
+            if (unavailableOrder is null)
+            {
+                throw new KeyNotFoundException("Order not found");
+            }
 
-        order.AssignedOrderManagerId = request.OrderManagerId;
-        order.AssignedAt = DateTime.UtcNow;
-        order.UpdatedAt = DateTime.UtcNow;
+            if (unavailableOrder.AssignedOrderManagerId is not null)
+            {
+                throw new InvalidOperationException("Order is already assigned.");
+            }
 
-        await _repo.UpdateAsync(order, cancellationToken);
-        await _repo.SaveChangesAsync(cancellationToken);
+            if (unavailableOrder.Status == OrderStatus.Delivered)
+            {
+                throw new InvalidOperationException("Delivered orders cannot be taken.");
+            }
+
+            if (unavailableOrder.Status == OrderStatus.Cancelled)
+            {
+                throw new InvalidOperationException("Cancelled orders cannot be taken.");
+            }
+
+            throw new InvalidOperationException("Order could not be assigned. Please try again.");
+        }
+
+        var order = await _repo.GetByIdAsync(request.OrderId, cancellationToken)
+            ?? throw new KeyNotFoundException("Order not found after assignment.");
 
         return OrderResponseFactory.Create(order);
     }

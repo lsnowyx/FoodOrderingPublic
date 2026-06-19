@@ -1,0 +1,11 @@
+@model ErrorViewModel
+
+@{
+    ViewData["Title"] = "Not Found";
+}
+
+<h1>Not Found</h1>
+<div class="alert alert-warning">
+    @(Model.Message ?? "The requested resource could not be found.")
+</div>
+<a class="btn btn-secondary" asp-controller="Dashboard" asp-action="Index">Return to dashboard</a>

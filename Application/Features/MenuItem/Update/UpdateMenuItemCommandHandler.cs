@@ -29,6 +29,7 @@ public class UpdateMenuItemCommandHandler : IRequestHandler<UpdateMenuItemComman
         existing.Description = request.Description;
         existing.Price = request.Price;
         existing.CategoryId = request.CategoryId;
+        existing.Category = category;
         existing.IsAvailable = request.IsAvailable;
 
         await _repo.UpdateAsync(existing, cancellationToken);

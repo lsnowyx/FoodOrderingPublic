@@ -20,9 +20,10 @@ public class MenuItemPicturesRepository : IMenuItemPicturesRepository
         return entity;
     }
 
-    public async Task DeleteAsync(MenuItemPicture entity, CancellationToken cancellationToken = default)
+    public Task DeleteAsync(MenuItemPicture entity, CancellationToken cancellationToken = default)
     {
         _context.MenuItemPictures.Remove(entity);
+        return Task.CompletedTask;
     }
 
     public async Task<IEnumerable<MenuItemPicture>> GetByMenuItemIdAsync(Guid menuItemId, CancellationToken cancellationToken = default)

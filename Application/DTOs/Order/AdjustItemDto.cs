@@ -2,10 +2,20 @@
 
 namespace Application.DTOs.Order;
 
-public sealed class AdjustItemDto
+public sealed class AdjustItemDto : IValidatableObject
 {
     public Guid ItemId { get; set; }
 
     [Range(1, int.MaxValue)]
     public int Quantity { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (ItemId == Guid.Empty)
+        {
+            yield return new ValidationResult(
+                "Order item id is required.",
+                new[] { nameof(ItemId) });
+        }
+    }
 }

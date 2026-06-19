@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace AdminPanel.Models.MenuItem;
 
@@ -15,6 +16,12 @@ public class MenuItemViewModel
 
     [Range(0, 1_000_000)]
     public decimal Price { get; set; }
+
+    [BindNever]
+    public decimal RestaurantCost { get; set; }
+
+    [BindNever]
+    public decimal TotalCalories { get; set; }
 
     [Required]
     public Guid CategoryId { get; set; }

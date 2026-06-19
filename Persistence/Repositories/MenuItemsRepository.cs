@@ -35,6 +35,53 @@ public class MenuItemsRepository : IMenuItemsRepository
         return await _context.MenuItems.Include(m => m.Category).ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<MenuItem>> GetPagedAsync(
+        int skip,
+        int take,
+        string? searchTerm,
+        Guid? categoryId,
+        bool? isAvailable,
+        CancellationToken cancellationToken = default)
+    {
+        return await ApplyFilters(GetMenuItemQuery(), searchTerm, categoryId, isAvailable)
+            .OrderBy(m => m.Name)
+            .ThenBy(m => m.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<MenuItem>> GetAvailableByCategoryPagedAsync(
+        Guid categoryId,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.MenuItems
+            .Include(m => m.MenuItemPictures)
+            .Where(m => m.CategoryId == categoryId && m.IsAvailable)
+            .OrderBy(m => m.Name)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountAsync(
+        string? searchTerm,
+        Guid? categoryId,
+        bool? isAvailable,
+        CancellationToken cancellationToken = default)
+    {
+        return await ApplyFilters(GetMenuItemQuery(), searchTerm, categoryId, isAvailable)
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task<int> CountAvailableByCategoryAsync(Guid categoryId, CancellationToken cancellationToken = default)
+    {
+        return await _context.MenuItems
+            .CountAsync(m => m.CategoryId == categoryId && m.IsAvailable, cancellationToken);
+    }
+
     public Task UpdateAsync(MenuItem menuItem, CancellationToken cancellationToken = default)
     {
         _context.MenuItems.Update(menuItem);
@@ -53,5 +100,40 @@ public class MenuItemsRepository : IMenuItemsRepository
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private IQueryable<MenuItem> GetMenuItemQuery()
+    {
+        return _context.MenuItems
+            .AsNoTracking()
+            .Include(menuItem => menuItem.Category);
+    }
+
+    private static IQueryable<MenuItem> ApplyFilters(
+        IQueryable<MenuItem> query,
+        string? searchTerm,
+        Guid? categoryId,
+        bool? isAvailable)
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var trimmedSearchTerm = searchTerm.Trim();
+
+            query = query.Where(menuItem =>
+                menuItem.Name.Contains(trimmedSearchTerm)
+                || (menuItem.Description != null && menuItem.Description.Contains(trimmedSearchTerm)));
+        }
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(menuItem => menuItem.CategoryId == categoryId.Value);
+        }
+
+        if (isAvailable.HasValue)
+        {
+            query = query.Where(menuItem => menuItem.IsAvailable == isAvailable.Value);
+        }
+
+        return query;
     }
 }

@@ -1,230 +1,143 @@
 using AdminPanel.Models.Order;
 using AdminPanel.Services;
+using Application.DTOs.Common;
+using Application.DTOs.Order;
+using Application.Features.Order.GetAssignedById;
+using Application.Features.Order.GetAvailable;
+using Application.Features.Order.Take;
+using Application.Features.Order.UpdatePayment;
+using Application.Features.Order.UpdateStatus;
 using Common.Constants;
+using Common.Enums;
+using Common.Extensions;
+using Mapster;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminPanel.Controllers;
 
-[Authorize(Roles = UserRoleConstants.ORDER_MANAGER_ROLE)]
+[Authorize(AuthorizationPolicyConstants.ORDER_MANAGER_POLICY)]
 public class OrdersController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IMediator _mediator;
 
-    public OrdersController(IApiClient apiClient)
+    public OrdersController(IMediator mediator)
     {
-        _apiClient = apiClient;
+        _mediator = mediator;
     }
 
-    public async Task<IActionResult> Index(string? status, string? paid)
+    public async Task<IActionResult> Index(
+        int page = PaginationParameters.DefaultPage,
+        int pageSize = PaginationParameters.DefaultPageSize,
+        OrderStatus? status = null,
+        bool? isPaid = null)
     {
-        try
+        var response = await _mediator.Send(new GetAvailableOrdersQuery
         {
-            var list = await _apiClient.GetAvailableOrdersAsync();
-            var items = (list ?? Enumerable.Empty<OrderViewModel>());
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                items = items.Where(i => string.Equals(i.Status, status, StringComparison.OrdinalIgnoreCase));
-            }
-            if (!string.IsNullOrWhiteSpace(paid))
-            {
-                if (paid.Equals("paid", StringComparison.OrdinalIgnoreCase)) items = items.Where(i => i.IsPaid);
-                if (paid.Equals("unpaid", StringComparison.OrdinalIgnoreCase)) items = items.Where(i => !i.IsPaid);
-            }
-            return View(items);
-        }
-        catch (UnauthorizedAccessException)
+            Page = page,
+            PageSize = pageSize,
+            Status = status,
+            IsPaid = isPaid
+        });
+
+        var model = new OrderIndexViewModel
         {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index", "Orders") });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return View(Enumerable.Empty<OrderViewModel>());
-        }
+            Status = status,
+            IsPaid = isPaid,
+            Orders = response.Adapt<AdminPanel.Models.Common.PaginatedViewModel<OrderViewModel>>()
+        };
+
+        return View(model);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Take(Guid id)
     {
-        try
+        await _mediator.Send(new TakeOrderCommand
         {
-            await _apiClient.TakeOrderAsync(id);
-            TempData["Success"] = "Order assigned to you.";
-            return RedirectToAction("Index", "Deliveries");
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Index");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index", "Orders") });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
+            OrderId = id,
+            OrderManagerId = User.GetUserId()
+        });
+
+        MvcErrorHelper.SetSuccessMessage(TempData, "Order assigned to you.");
+        return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
     }
 
     public async Task<IActionResult> Details(Guid id)
     {
-        try
+        var response = await _mediator.Send(new GetAssignedOrderByIdQuery
         {
-            var item = await _apiClient.GetAsync<OrderViewModel>($"api/orders/{id}");
-            if (item == null) return NotFound();
-            return View(item);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Details", "Orders", new { id }) });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
+            Id = id,
+            OrderManagerId = User.GetUserId()
+        });
+
+        return response is null
+            ? NotFound()
+            : View(response.Adapt<OrderViewModel>());
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpdatePayment(Guid id, bool isPaid)
+    public async Task<IActionResult> UpdatePayment(Guid id, UpdateOrderPaymentViewModel model)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            var payload = new UpdateOrderPaymentViewModel { IsPaid = isPaid };
-            await _apiClient.PatchAsync<object, object>($"api/orders/{id}/payment", payload);
-            TempData["Success"] = "Payment status updated.";
-            return RedirectToAction("Index", "Deliveries");
+            AddFirstModelStateErrorToTempData("Payment status is invalid.");
+            return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
         }
-        catch (ApiException ex)
+
+        var request = model.Adapt<UpdateOrderPaymentRequest>();
+        if (!TryValidateModel(request))
         {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Index", "Deliveries");
+            AddFirstModelStateErrorToTempData("Payment status is invalid.");
+            return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
         }
-        catch (UnauthorizedAccessException)
-        {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Details", "Orders", new { id }) });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
+
+        var command = request.Adapt<UpdateOrderPaymentCommand>();
+        command.Id = id;
+        command.OrderManagerId = User.GetUserId();
+
+        await _mediator.Send(command);
+        MvcErrorHelper.SetSuccessMessage(TempData, "Payment status updated.");
+        return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpdateStatus(Guid id, string status)
+    public async Task<IActionResult> UpdateStatus(Guid id, UpdateOrderStatusViewModel model)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            var payload = new UpdateOrderStatusViewModel { Status = status };
-            await _apiClient.PatchAsync<object, object>($"api/orders/{id}/status", payload);
-            TempData["Success"] = "Order status updated.";
-            return RedirectToAction("Index", "Deliveries");
+            AddFirstModelStateErrorToTempData("Order status is invalid.");
+            return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
         }
-        catch (ApiException ex)
+
+        var request = model.Adapt<UpdateOrderStatusRequest>();
+        if (!TryValidateModel(request))
         {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Index", "Deliveries");
+            AddFirstModelStateErrorToTempData("Order status is invalid.");
+            return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
         }
-        catch (UnauthorizedAccessException)
-        {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Details", "Orders", new { id }) });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
+
+        var command = request.Adapt<UpdateOrderStatusCommand>();
+        command.Id = id;
+        command.OrderManagerId = User.GetUserId();
+
+        await _mediator.Send(command);
+        MvcErrorHelper.SetSuccessMessage(TempData, "Order status updated.");
+        return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AdjustItems(Guid id, List<OrderItemViewModel> items)
+    private void AddFirstModelStateErrorToTempData(string fallbackMessage)
     {
-        try
-        {
-            var payload = new AdjustOrderItemsViewModel
-            {
-                Items = items.Select(i => new AdjustOrderItemViewModel { ItemId = i.Id, Quantity = i.Quantity }).ToList()
-            };
+        var message = ModelState.Values
+            .SelectMany(value => value.Errors)
+            .Select(error => error.ErrorMessage)
+            .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
+            ?? fallbackMessage;
 
-            await _apiClient.PutAsync<object, object>($"api/orders/{id}/items", payload);
-            TempData["Success"] = "Order items updated.";
-            return RedirectToAction("Index", "Deliveries");
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Index", "Deliveries");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Details", "Orders", new { id }) });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> RemoveItem(Guid id, Guid itemId)
-    {
-        try
-        {
-            await _apiClient.DeleteAsync($"api/orders/{id}/items/{itemId}");
-            TempData["Success"] = "Item removed from order.";
-            return RedirectToAction("Index", "Deliveries");
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Index", "Deliveries");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Details", "Orders", new { id }) });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> MarkDelivered(Guid id)
-    {
-        try
-        {
-            await _apiClient.MarkDeliveredAsync(id);
-            TempData["Success"] = "Order marked as delivered.";
-            return RedirectToAction("Index", "Deliveries");
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Index", "Deliveries");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Details", "Orders", new { id }) });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
+        MvcErrorHelper.SetErrorMessage(TempData, message);
     }
 }
-

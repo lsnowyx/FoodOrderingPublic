@@ -31,21 +31,23 @@ public class DeleteMenuItemPictureCommandHandler : IRequestHandler<DeleteMenuIte
         await _repo.DeleteAsync(pic, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
 
-        try
+        var imageDeleted = true;
+        if (!string.IsNullOrWhiteSpace(publicId))
         {
-            if (!string.IsNullOrWhiteSpace(publicId))
+            try
             {
-                await cloudinaryService.DeleteImageAsync(publicId, cancellationToken);
+                imageDeleted = await cloudinaryService.DeleteImageAsync(publicId, cancellationToken);
+            }
+            catch
+            {
+                imageDeleted = false;
             }
         }
-        catch
-        {
-            // Log this later.
-            // Do not fail the whole operation because the DB delete already succeeded.
-            //Schedule deletion later.
-            return new OperationResponse(true, "Menu item picture deleted. Without Cloudinary Deletion");
-        }
 
-        return new OperationResponse(true, "Menu item picture deleted. With Cloudinary Deletion");
+        return new OperationResponse(
+            true,
+            imageDeleted
+                ? "Menu item picture deleted."
+                : "Menu item picture deleted, but image cleanup could not be confirmed.");
     }
 }

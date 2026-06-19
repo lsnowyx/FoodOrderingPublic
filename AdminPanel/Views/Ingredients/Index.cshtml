@@ -1,35 +1,64 @@
-@model IEnumerable<AdminPanel.Models.Ingredient.IngredientViewModel>
+@model AdminPanel.Models.Ingredient.IngredientIndexViewModel
 
 @{
     ViewData["Title"] = "Ingredients";
+    var ingredients = Model.Ingredients;
+    var previousPage = ingredients.Page - 1;
+    var nextPage = ingredients.Page + 1;
 }
 
 <h3>Ingredients</h3>
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
 
 @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
 {
     <a class="btn btn-primary mb-2" asp-action="Create">Create Ingredient</a>
 }
 
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-5">
+        <input type="search"
+               name="searchTerm"
+               value="@Model.SearchTerm"
+               class="form-control"
+               placeholder="Search ingredients" />
+    </div>
+    <div class="col-auto">
+        <select name="pageSize" class="form-select">
+            <option value="12" selected="@(ingredients.PageSize == 12)">12</option>
+            <option value="25" selected="@(ingredients.PageSize == 25)">25</option>
+            <option value="50" selected="@(ingredients.PageSize == 50)">50</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" type="submit">Search</button>
+        <a class="btn btn-secondary" asp-action="Index">Clear</a>
+    </div>
+</form>
+
 <table class="table table-striped">
     <thead>
         <tr>
             <th>Name</th>
+            <th>Base Unit</th>
+            <th>Unit Cost</th>
             <th>Allergen Info</th>
             <th>Calories/Unit</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var i in Model)
+        @if (ingredients.Items.Count == 0)
+        {
+            <tr>
+                <td colspan="6" class="text-muted">No ingredients found.</td>
+            </tr>
+        }
+        @foreach (var i in ingredients.Items)
         {
             <tr>
                 <td>@i.Name</td>
+                <td>@i.BaseUnit</td>
+                <td>@i.UnitCost?.ToString("C")</td>
                 <td>@i.AllergenInfo</td>
                 <td>@i.CaloriesPerUnit</td>
                 <td>
@@ -44,3 +73,33 @@
         }
     </tbody>
 </table>
+
+@if (ingredients.TotalPages > 0)
+{
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="text-muted">
+            Showing page @ingredients.Page of @ingredients.TotalPages (@ingredients.TotalCount total)
+        </div>
+        <nav aria-label="Ingredients pagination">
+            <ul class="pagination mb-0">
+                <li class="page-item @(ingredients.HasPreviousPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-page="@previousPage"
+                       asp-route-pageSize="@ingredients.PageSize"
+                       asp-route-searchTerm="@Model.SearchTerm">Previous</a>
+                </li>
+                <li class="page-item active">
+                    <span class="page-link">@ingredients.Page</span>
+                </li>
+                <li class="page-item @(ingredients.HasNextPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-page="@nextPage"
+                       asp-route-pageSize="@ingredients.PageSize"
+                       asp-route-searchTerm="@Model.SearchTerm">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}

@@ -3,7 +3,7 @@ using Application.DTOs.AuditLog;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using WebApi.Extensions;
+using Common.Extensions;
 
 namespace WebApi.Middlewares;
 
@@ -18,6 +18,7 @@ public sealed class AuditMiddleware
         "newPassword",
         "confirmPassword",
         "token",
+        "trackingToken",
         "accessToken",
         "refreshToken",
         "authorization",
@@ -191,11 +192,7 @@ public sealed class AuditMiddleware
     {
         try
         {
-            var userId = context.User.GetUserId();
-
-            return Guid.TryParse(userId, out var parsedUserId)
-                ? parsedUserId
-                : null;
+            return context.User.GetUserId();
         }
         catch
         {

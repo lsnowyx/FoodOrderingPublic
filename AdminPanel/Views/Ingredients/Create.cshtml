@@ -9,6 +9,7 @@
 @using (Html.BeginForm())
 {
     @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <div class="form-group">
         @Html.LabelFor(m => m.Name)
         @Html.TextBoxFor(m => m.Name, new { @class = "form-control" })
@@ -18,6 +19,20 @@
         @Html.LabelFor(m => m.AllergenInfo)
         @Html.TextAreaFor(m => m.AllergenInfo, new { @class = "form-control", rows = 3 })
         @Html.ValidationMessageFor(m => m.AllergenInfo, "", new { @class = "text-danger" })
+    </div>
+    <div class="form-group">
+        @Html.LabelFor(m => m.BaseUnit)
+        @Html.TextBoxFor(
+            m => m.BaseUnit,
+            new { @class = "form-control", placeholder = "Examples: 1 piece, 100g, 1 liter" })
+        @Html.ValidationMessageFor(m => m.BaseUnit, "", new { @class = "text-danger" })
+    </div>
+    <div class="form-group">
+        @Html.LabelFor(m => m.UnitCost)
+        @Html.TextBoxFor(
+            m => m.UnitCost,
+            new { @class = "form-control", type = "number", min = "0", step = "0.01" })
+        @Html.ValidationMessageFor(m => m.UnitCost, "", new { @class = "text-danger" })
     </div>
     <div class="form-group">
         @Html.LabelFor(m => m.CaloriesPerUnit)

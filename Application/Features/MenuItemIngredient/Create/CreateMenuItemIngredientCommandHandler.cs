@@ -1,5 +1,8 @@
+using Application.Abstractions.Persistence;
 using Application.Abstractions.Repositories;
+using Application.Abstractions.Services;
 using Application.DTOs.MenuItemIngredient;
+using Mapster;
 using MediatR;
 
 namespace Application.Features.MenuItemIngredient.Create;
@@ -7,40 +10,61 @@ namespace Application.Features.MenuItemIngredient.Create;
 public class CreateMenuItemIngredientCommandHandler : IRequestHandler<CreateMenuItemIngredientCommand, MenuItemIngredientResponse>
 {
     private readonly IMenuItemIngredientsRepository _repo;
-    private readonly Application.Abstractions.Repositories.IMenuItemsRepository _menuRepo;
-    private readonly Application.Abstractions.Repositories.IIngredientsRepository _ingredientRepo;
+    private readonly IMenuItemsRepository _menuRepo;
+    private readonly IIngredientsRepository _ingredientRepo;
+    private readonly IMenuItemCostService _menuItemCostService;
+    private readonly IApplicationTransaction _transaction;
 
-    public CreateMenuItemIngredientCommandHandler(IMenuItemIngredientsRepository repo, Application.Abstractions.Repositories.IMenuItemsRepository menuRepo, Application.Abstractions.Repositories.IIngredientsRepository ingredientRepo)
+    public CreateMenuItemIngredientCommandHandler(
+        IMenuItemIngredientsRepository repo,
+        IMenuItemsRepository menuRepo,
+        IIngredientsRepository ingredientRepo,
+        IMenuItemCostService menuItemCostService,
+        IApplicationTransaction transaction)
     {
         _repo = repo;
         _menuRepo = menuRepo;
         _ingredientRepo = ingredientRepo;
+        _menuItemCostService = menuItemCostService;
+        _transaction = transaction;
     }
 
     public async Task<MenuItemIngredientResponse> Handle(CreateMenuItemIngredientCommand request, CancellationToken cancellationToken)
     {
-        // validate menu exists
-        var menu = await _menuRepo.GetByIdAsync(request.MenuItemId, cancellationToken);
-        if (menu == null) throw new KeyNotFoundException("Menu item not found");
-
-        // validate ingredient exists
-        var ingredient = await _ingredientRepo.GetByIdAsync(request.IngredientId, cancellationToken);
-        if (ingredient == null) throw new KeyNotFoundException("Ingredient not found");
-
-        // prevent duplicate
-        var exists = await _repo.ExistsByMenuItemAndIngredientAsync(request.MenuItemId, request.IngredientId, cancellationToken);
-        if (exists) throw new InvalidOperationException("Ingredient already assigned to menu item");
-
-        var toAdd = new Domain.Entities.MenuItemIngredient
+        return await _transaction.ExecuteAsync(async transactionCancellationToken =>
         {
-            MenuItemId = request.MenuItemId,
-            IngredientId = request.IngredientId,
-            Quantity = request.Quantity
-        };
+            var menu = await _menuRepo.GetByIdAsync(
+                request.MenuItemId,
+                transactionCancellationToken);
+            if (menu == null) throw new KeyNotFoundException("Menu item not found");
 
-        await _repo.AddAsync(toAdd, cancellationToken);
-        await _repo.SaveChangesAsync(cancellationToken);
+            var ingredient = await _ingredientRepo.GetByIdAsync(
+                request.IngredientId,
+                transactionCancellationToken);
+            if (ingredient == null) throw new KeyNotFoundException("Ingredient not found");
 
-        return new MenuItemIngredientResponse(toAdd.Id, ingredient.Id, ingredient.Name ?? string.Empty, ingredient.AllergenInfo ?? string.Empty, ingredient.CaloriesPerUnit ?? 0, toAdd.Quantity);
+            var exists = await _repo.ExistsByMenuItemAndIngredientAsync(
+                request.MenuItemId,
+                request.IngredientId,
+                transactionCancellationToken);
+            if (exists)
+                throw new InvalidOperationException("Ingredient already assigned to menu item");
+
+            var toAdd = new Domain.Entities.MenuItemIngredient
+            {
+                MenuItemId = request.MenuItemId,
+                IngredientId = request.IngredientId,
+                Ingredient = ingredient,
+                Quantity = request.Quantity
+            };
+
+            await _repo.AddAsync(toAdd, transactionCancellationToken);
+            await _repo.SaveChangesAsync(transactionCancellationToken);
+            await _menuItemCostService.RecalculateMenuItemCostAsync(
+                request.MenuItemId,
+                transactionCancellationToken);
+
+            return toAdd.Adapt<MenuItemIngredientResponse>();
+        }, cancellationToken);
     }
 }

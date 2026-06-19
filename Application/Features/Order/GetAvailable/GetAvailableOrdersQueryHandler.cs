@@ -1,10 +1,12 @@
 using Application.Abstractions.Repositories;
+using Application.DTOs.Common;
 using Application.DTOs.Order;
 using MediatR;
 
 namespace Application.Features.Order.GetAvailable;
 
-public class GetAvailableOrdersQueryHandler : IRequestHandler<GetAvailableOrdersQuery, IEnumerable<OrderResponse>>
+public class GetAvailableOrdersQueryHandler
+    : IRequestHandler<GetAvailableOrdersQuery, PaginatedResponse<OrderResponse>>
 {
     private readonly IOrdersRepository _repo;
 
@@ -13,9 +15,23 @@ public class GetAvailableOrdersQueryHandler : IRequestHandler<GetAvailableOrders
         _repo = repo;
     }
 
-    public async Task<IEnumerable<OrderResponse>> Handle(GetAvailableOrdersQuery request, CancellationToken cancellationToken)
+    public async Task<PaginatedResponse<OrderResponse>> Handle(
+        GetAvailableOrdersQuery request,
+        CancellationToken cancellationToken)
     {
-        var all = await _repo.GetAvailableAsync(cancellationToken);
-        return all.Select(OrderResponseFactory.Create);
+        var pagination = PaginationParameters.Create(request.Page, request.PageSize);
+        var totalCount = await _repo.CountAvailableAsync(
+            request.Status,
+            request.IsPaid,
+            cancellationToken);
+        var orders = await _repo.GetAvailablePagedAsync(
+            pagination.Skip,
+            pagination.PageSize,
+            request.Status,
+            request.IsPaid,
+            cancellationToken);
+        var items = orders.Select(OrderResponseFactory.Create).ToList();
+
+        return PaginatedResponse<OrderResponse>.Create(pagination, totalCount, items);
     }
 }

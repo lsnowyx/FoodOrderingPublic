@@ -2,7 +2,8 @@ namespace Application.DTOs.Order;
 
 public sealed record OrderResponse(
     Guid Id,
-    Guid CustomerId,
+    Guid? UserId,
+    Guid? GuestCustomerId,
     Guid? AssignedOrderManagerId,
     DateTime? AssignedAt,
     DateTime OrderDate,

@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.DTOs.Order;
+using Common.Enums;
 using MediatR;
 
 namespace Application.Features.Order.UpdatePayment;
@@ -20,10 +21,21 @@ public class UpdateOrderPaymentCommandHandler : IRequestHandler<UpdateOrderPayme
         OrderAssignmentGuard.EnsureAssignedToOrderManager(order, request.OrderManagerId);
         OrderAssignmentGuard.EnsureEditable(order);
 
-        if (order.IsPaid && !request.IsPaid)
+        if (!request.IsPaid
+            && (order.IsPaid
+                || order.Status == OrderStatus.Paid
+                || order.Status == OrderStatus.Preparing
+                || order.Status == OrderStatus.OutForDelivery))
             throw new InvalidOperationException("Paid orders cannot be marked as unpaid.");
 
         order.IsPaid = request.IsPaid;
+        if (request.IsPaid && order.Status == OrderStatus.Pending)
+        {
+            order.Status = OrderStatus.Paid;
+        }
+
+        order.UpdatedAt = DateTime.UtcNow;
+
         await _repo.UpdateAsync(order, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
         return OrderResponseFactory.Create(order);

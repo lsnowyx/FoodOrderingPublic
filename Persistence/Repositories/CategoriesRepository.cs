@@ -30,6 +30,40 @@ public class CategoriesRepository : ICategoriesRepository
         return await _context.Categories.ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Category>> GetPagedAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        return await GetCategoryQuery()
+            .OrderBy(c => c.Name)
+            .ThenBy(c => c.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Category>> GetPagedAsync(
+        int skip,
+        int take,
+        string? searchTerm,
+        CancellationToken cancellationToken = default)
+    {
+        return await ApplySearch(GetCategoryQuery(), searchTerm)
+            .OrderBy(c => c.Name)
+            .ThenBy(c => c.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        return await GetCategoryQuery().CountAsync(cancellationToken);
+    }
+
+    public async Task<int> CountAsync(string? searchTerm, CancellationToken cancellationToken = default)
+    {
+        return await ApplySearch(GetCategoryQuery(), searchTerm).CountAsync(cancellationToken);
+    }
+
     public Task UpdateAsync(Category category, CancellationToken cancellationToken = default)
     {
         _context.Categories.Update(category);
@@ -48,5 +82,24 @@ public class CategoriesRepository : ICategoriesRepository
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private IQueryable<Category> GetCategoryQuery()
+    {
+        return _context.Categories.AsNoTracking();
+    }
+
+    private static IQueryable<Category> ApplySearch(IQueryable<Category> query, string? searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return query;
+        }
+
+        var trimmedSearchTerm = searchTerm.Trim();
+
+        return query.Where(category =>
+            category.Name.Contains(trimmedSearchTerm)
+            || (category.Description != null && category.Description.Contains(trimmedSearchTerm)));
     }
 }

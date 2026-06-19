@@ -1,5 +1,5 @@
 using Application.DTOs.Request;
-using Application.Features.Account.Create;
+using Application.Features.Account.CreateStaff;
 using Common.Constants;
 using Mapster;
 using MediatR;
@@ -22,7 +22,7 @@ public class AdminAccountsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateAccount([FromBody] CreateAdminAccountRequest request)
     {
-        var command = request.Adapt<CreateAccountCommand>();
+        var command = request.Adapt<CreateStaffAccountCommand>();
         var result = await _mediator.Send(command);
         return CreatedAtAction(nameof(CreateAccount), result);
     }

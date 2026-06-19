@@ -1,4 +1,5 @@
 using Application.Abstractions.Repositories;
+using Application.Abstractions.Services;
 using Application.DTOs.Order;
 using Common.Enums;
 using MediatR;
@@ -8,10 +9,14 @@ namespace Application.Features.Order.UpdateStatus;
 public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatusCommand, OrderResponse>
 {
     private readonly IOrdersRepository _repo;
+    private readonly IOrderCompletionService _orderCompletionService;
 
-    public UpdateOrderStatusCommandHandler(IOrdersRepository repo)
+    public UpdateOrderStatusCommandHandler(
+        IOrdersRepository repo,
+        IOrderCompletionService orderCompletionService)
     {
         _repo = repo;
+        _orderCompletionService = orderCompletionService;
     }
 
     public async Task<OrderResponse> Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
@@ -28,11 +33,28 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
         if (!IsValidStatusTransition(current, newStatus))
             throw new ArgumentException($"Invalid status transition from {current} to {newStatus}");
 
-        order.Status = newStatus;
-        order.UpdatedAt = DateTime.UtcNow;
+        if (!order.IsPaid
+            && newStatus is OrderStatus.Preparing
+                or OrderStatus.OutForDelivery
+                or OrderStatus.Delivered)
+        {
+            throw new InvalidOperationException(
+                $"Unpaid orders cannot move to {newStatus}.");
+        }
+
         if (newStatus == OrderStatus.Delivered)
         {
-            order.DeliveredAt = DateTime.UtcNow;
+            await _orderCompletionService.MarkDeliveredAsync(order, DateTime.UtcNow, cancellationToken);
+        }
+        else
+        {
+            order.Status = newStatus;
+            if (newStatus == OrderStatus.Paid)
+            {
+                order.IsPaid = true;
+            }
+
+            order.UpdatedAt = DateTime.UtcNow;
         }
 
         await _repo.UpdateAsync(order, cancellationToken);

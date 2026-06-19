@@ -6,14 +6,32 @@ namespace Application.Extensions;
 
 public static class ApplicationExtension
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(
+        this IServiceCollection services,
+        params Assembly[] additionalMappingAssemblies)
     {
+        var applicationAssembly = Assembly.GetExecutingAssembly();
+
         services.AddMediatR(config =>
         {
-            config.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            config.RegisterServicesFromAssembly(applicationAssembly);
         });
 
-        TypeAdapterConfig.GlobalSettings.Scan(Assembly.GetExecutingAssembly());
+        var mappingConfig = TypeAdapterConfig.GlobalSettings;
+        mappingConfig.Scan(applicationAssembly);
+
+        foreach (var assembly in additionalMappingAssemblies.Distinct())
+        {
+            if (assembly != applicationAssembly)
+            {
+                mappingConfig.Scan(assembly);
+            }
+        }
+
+        mappingConfig.RequireDestinationMemberSource = true;
+        mappingConfig.RequireExplicitMapping = true;
+        mappingConfig.RequireExplicitMappingPrimitive = true;
+        mappingConfig.Compile();
 
         return services;
     }

@@ -12,7 +12,6 @@ public sealed class UpdateMenuItemIngredientCommand : IRequest<MenuItemIngredien
     [Required]
     public Guid IngredientId { get; set; }
 
-    [Required]
-    [StringLength(50)]
-    public string Quantity { get; set; } = null!;
+    [Range(typeof(decimal), "0.0001", "99999999999999.9999")]
+    public decimal Quantity { get; set; }
 }

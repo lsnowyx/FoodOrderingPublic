@@ -1,6 +1,7 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
 using Application.DTOs.MenuItemPicture;
+using Mapster;
 using MediatR;
 
 namespace Application.Features.MenuItemPicture.Create;
@@ -34,9 +35,25 @@ public class CreateMenuItemPictureCommandHandler : IRequestHandler<CreateMenuIte
             Caption = request.Caption
         };
 
-        await _repo.AddAsync(toAdd, cancellationToken);
-        await _repo.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _repo.AddAsync(toAdd, cancellationToken);
+            await _repo.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            try
+            {
+                await cloudinaryService.DeleteImageAsync(cloudinaryResponse.PublicId, cancellationToken);
+            }
+            catch
+            {
+                // The original persistence failure is more important than cleanup failure.
+            }
 
-        return new MenuItemPictureResponse(toAdd.Id, toAdd.MenuItemId, toAdd.ImageUrl, toAdd.Caption);
+            throw;
+        }
+
+        return toAdd.Adapt<MenuItemPictureResponse>();
     }
 }

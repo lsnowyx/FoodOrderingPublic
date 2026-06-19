@@ -1,19 +1,23 @@
 using AdminPanel.Models.Auth;
 using AdminPanel.Services;
+using Application.DTOs.Request;
+using Application.Features.Account.CreateStaff;
 using Common.Constants;
+using Mapster;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminPanel.Controllers;
 
-[Authorize(Roles = UserRoleConstants.ADMIN_ROLE)]
+[Authorize(AuthorizationPolicyConstants.ADMIN_POLICY)]
 public class AccountsController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IMediator _mediator;
 
-    public AccountsController(IApiClient apiClient)
+    public AccountsController(IMediator mediator)
     {
-        _apiClient = apiClient;
+        _mediator = mediator;
     }
 
     public IActionResult Create()
@@ -22,35 +26,33 @@ public class AccountsController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateAccountViewModel model)
     {
         if (!ModelState.IsValid)
+        {
             return View(model);
+        }
+
+        var request = model.Adapt<CreateAdminAccountRequest>();
+        if (!TryValidateModel(request))
+        {
+            return View(model);
+        }
 
         try
         {
-            var payload = new
-            {
-                userName = model.UserName,
-                password = model.Password,
-                role = model.Role
-            };
+            var command = request.Adapt<CreateStaffAccountCommand>();
+            var response = await _mediator.Send(command);
 
-            await _apiClient.PostAsync<object, object>("api/admin/accounts", payload);
-            TempData["Success"] = $"Account created successfully for {model.UserName}";
-            return RedirectToAction("Create");
+            MvcErrorHelper.SetSuccessMessage(
+                TempData,
+                $"Account created successfully for {response.UserName}.");
+            return RedirectToAction(nameof(Create));
         }
-        catch (UnauthorizedAccessException)
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
         {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Create", "Accounts") });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
-        catch (ApiException ex)
-        {
-            ApiErrorHelper.AddErrorsToModelState(ModelState, ex.Content);
+            MvcErrorHelper.AddToModelState(ModelState, exception);
             return View(model);
         }
     }

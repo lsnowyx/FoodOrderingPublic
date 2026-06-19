@@ -1,157 +1,158 @@
 using AdminPanel.Models.Category;
 using AdminPanel.Services;
+using Application.DTOs.Category;
+using Application.DTOs.Common;
+using Application.Features.Category.Create;
+using Application.Features.Category.Delete;
+using Application.Features.Category.Get;
+using Application.Features.Category.GetById;
+using Application.Features.Category.Update;
+using Application.Features.MenuItem.Get;
 using Common.Constants;
+using Mapster;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminPanel.Controllers;
 
-[Authorize]
+[Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
 public class CategoriesController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IMediator _mediator;
 
-    public CategoriesController(IApiClient apiClient)
+    public CategoriesController(IMediator mediator)
     {
-        _apiClient = apiClient;
+        _mediator = mediator;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        int page = PaginationParameters.DefaultPage,
+        int pageSize = PaginationParameters.DefaultPageSize,
+        string? searchTerm = null)
     {
-        try
+        var model = new CategoryIndexViewModel
         {
-            var list = await _apiClient.GetAsync<IEnumerable<CategoryViewModel>>("api/categories");
-            return View(list ?? Enumerable.Empty<CategoryViewModel>());
-        }
-        catch (UnauthorizedAccessException)
+            SearchTerm = searchTerm
+        };
+
+        var response = await _mediator.Send(new GetCategoriesQuery
         {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index", "Categories") });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return View(Enumerable.Empty<CategoryViewModel>());
-        }
+            Page = page,
+            PageSize = pageSize,
+            SearchTerm = searchTerm
+        });
+
+        model.Categories = response.Adapt<AdminPanel.Models.Common.PaginatedViewModel<CategoryViewModel>>();
+
+        return View(model);
     }
 
-    public async Task<IActionResult> Details(Guid id)
+    public async Task<IActionResult> Details(
+        Guid id,
+        int page = PaginationParameters.DefaultPage,
+        int pageSize = PaginationParameters.DefaultPageSize)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<CategoryViewModel>($"api/categories/{id}");
-            if (item == null) return NotFound();
+        var categoryResponse = await _mediator.Send(new GetCategoryByIdQuery { Id = id });
+        if (categoryResponse is null) return NotFound();
 
-            // fetch menu items and filter by category
-            IEnumerable<AdminPanel.Models.MenuItem.MenuItemViewModel> menuItems = Enumerable.Empty<AdminPanel.Models.MenuItem.MenuItemViewModel>();
-            try
-            {
-                var all = await _apiClient.GetAsync<IEnumerable<AdminPanel.Models.MenuItem.MenuItemViewModel>>("api/menu-items");
-                menuItems = (all ?? Enumerable.Empty<AdminPanel.Models.MenuItem.MenuItemViewModel>()).Where(m => m.CategoryId == id);
-            }
-            catch (ForbiddenException)
-            {
-                // ignore; user may not have permission to view menu management
-                menuItems = Enumerable.Empty<AdminPanel.Models.MenuItem.MenuItemViewModel>();
-            }
-
-            var vm = new CategoryDetailsViewModel { Category = item, MenuItems = menuItems };
-            return View(vm);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        var menuItemsResponse = await _mediator.Send(new GetMenuItemsQuery
         {
-            return NotFound();
-        }
+            Page = page,
+            PageSize = pageSize,
+            CategoryId = id
+        });
+
+        var model = new CategoryDetailsViewModel
+        {
+            Category = categoryResponse.Adapt<CategoryViewModel>(),
+            MenuItems = menuItemsResponse.Adapt<
+                AdminPanel.Models.Common.PaginatedViewModel<
+                    AdminPanel.Models.MenuItem.MenuItemViewModel>>()
+        };
+
+        return View(model);
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public IActionResult Create()
     {
         return View(new CategoryViewModel());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Create(CategoryViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
+
+        var request = model.Adapt<CreateCategoryRequest>();
+        if (!TryValidateModel(request)) return View(model);
+
         try
         {
-            var created = await _apiClient.CreateCategoryAsync(model);
-            return RedirectToAction("Index");
+            var command = request.Adapt<CreateCategoryCommand>();
+            await _mediator.Send(command);
+            MvcErrorHelper.SetSuccessMessage(TempData, "Category created.");
+            return RedirectToAction(nameof(Index));
         }
-        catch (ApiException ex)
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
         {
-            ApiErrorHelper.AddErrorsToModelState(ModelState, ex.Content);
+            MvcErrorHelper.AddToModelState(ModelState, exception);
             return View(model);
         }
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<CategoryViewModel>($"api/categories/{id}");
-            if (item == null) return NotFound();
-            return View(item);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        var response = await _mediator.Send(new GetCategoryByIdQuery { Id = id });
+        if (response is null) return NotFound();
+
+        return View(response.Adapt<CategoryViewModel>());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Edit(Guid id, CategoryViewModel model)
     {
         model.Id = id;
         if (!ModelState.IsValid) return View(model);
+
+        var request = model.Adapt<UpdateCategoryRequest>();
+        if (!TryValidateModel(request)) return View(model);
+
         try
         {
-            var updated = await _apiClient.UpdateCategoryAsync(id, model);
-            return RedirectToAction("Index");
+            var command = request.Adapt<UpdateCategoryCommand>();
+            command.Id = id;
+            await _mediator.Send(command);
+            MvcErrorHelper.SetSuccessMessage(TempData, "Category updated.");
+            return RedirectToAction(nameof(Index));
         }
-        catch (ApiException ex)
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
         {
-            ApiErrorHelper.AddErrorsToModelState(ModelState, ex.Content);
+            MvcErrorHelper.AddToModelState(ModelState, exception);
             return View(model);
         }
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<CategoryViewModel>($"api/categories/{id}");
-            if (item == null) return NotFound();
-            return View(item);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        var response = await _mediator.Send(new GetCategoryByIdQuery { Id = id });
+        if (response is null) return NotFound();
+
+        return View(response.Adapt<CategoryViewModel>());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> DeleteConfirmed(Guid id)
     {
-        try
+        OperationResponse response = await _mediator.Send(new DeleteCategoryCommand { Id = id });
+        if (!response.Success)
         {
-            await _apiClient.DeleteAsync($"api/categories/{id}");
-            return RedirectToAction("Index");
+            MvcErrorHelper.SetErrorMessage(TempData, response.Message);
+            return RedirectToAction(nameof(Delete), new { id });
         }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? "Failed to delete category.";
-            return RedirectToAction("Delete", new { id });
-        }
+
+        MvcErrorHelper.SetSuccessMessage(TempData, response.Message);
+        return RedirectToAction(nameof(Index));
     }
 }
 

@@ -2,6 +2,9 @@
 
 @{
     ViewData["Title"] = "Category Details";
+    var menuItems = Model.MenuItems;
+    var previousPage = menuItems.Page - 1;
+    var nextPage = menuItems.Page + 1;
 }
 
 <h3>@Model.Category.Name</h3>
@@ -23,7 +26,7 @@
 
 <h4 class="mt-4">Menu Items in this Category</h4>
 
-@if (Model.MenuItems != null && Model.MenuItems.Any())
+@if (menuItems.Items.Count > 0)
 {
     <table class="table">
         <thead>
@@ -35,7 +38,7 @@
             </tr>
         </thead>
         <tbody>
-        @foreach (var m in Model.MenuItems)
+        @foreach (var m in menuItems.Items)
         {
             <tr>
                 <td>@m.Name</td>
@@ -64,5 +67,35 @@
 }
 else
 {
-    <p>No menu items in this category or you may not have permission to view them.</p>
+    <p>No menu items in this category.</p>
+}
+
+@if (menuItems.TotalPages > 0)
+{
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted">
+            Showing page @menuItems.Page of @menuItems.TotalPages (@menuItems.TotalCount total)
+        </div>
+        <nav aria-label="Category menu items pagination">
+            <ul class="pagination mb-0">
+                <li class="page-item @(menuItems.HasPreviousPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Details"
+                       asp-route-id="@Model.Category.Id"
+                       asp-route-page="@previousPage"
+                       asp-route-pageSize="@menuItems.PageSize">Previous</a>
+                </li>
+                <li class="page-item active">
+                    <span class="page-link">@menuItems.Page</span>
+                </li>
+                <li class="page-item @(menuItems.HasNextPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Details"
+                       asp-route-id="@Model.Category.Id"
+                       asp-route-page="@nextPage"
+                       asp-route-pageSize="@menuItems.PageSize">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
 }

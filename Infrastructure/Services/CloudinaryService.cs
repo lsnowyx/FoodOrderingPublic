@@ -3,6 +3,7 @@ using Application.DTOs.Cloudinary;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Domain.ConfigModels;
+using Infrastructure.Constants;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
@@ -11,8 +12,6 @@ namespace Infrastructure.Services;
 public class CloudinaryService : ICloudinaryService
 {
     private readonly Cloudinary _cloudinary;
-
-    private const string MenuItemPicturesFolder = "restaurant-app/menu-items";
 
     private static readonly string[] AllowedImageExtensions =
     [
@@ -52,7 +51,7 @@ public class CloudinaryService : ICloudinaryService
         var uploadParams = new ImageUploadParams
         {
             File = new FileDescription(file.FileName, stream),
-            Folder = MenuItemPicturesFolder,
+            Folder = CloudinaryFolderConstants.Images,
             UseFilename = false,
             UniqueFilename = true,
             Overwrite = false

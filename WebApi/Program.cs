@@ -18,6 +18,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddPresentation(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddFoodOrderingAuthorization();
 
 builder.Services.Configure<List<SeedUser>>
     (builder.Configuration.GetSection("SeedUsers"));

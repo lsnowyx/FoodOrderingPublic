@@ -1,20 +1,39 @@
-@model IEnumerable<AdminPanel.Models.Category.CategoryViewModel>
+@model AdminPanel.Models.Category.CategoryIndexViewModel
 
 @{
     ViewData["Title"] = "Categories";
+    var categories = Model.Categories;
+    var previousPage = categories.Page - 1;
+    var nextPage = categories.Page + 1;
 }
 
 <h3>Categories</h3>
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
 
 @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
 {
     <a class="btn btn-primary mb-2" asp-action="Create">Create Category</a>
 }
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-5">
+        <input type="search"
+               name="searchTerm"
+               value="@Model.SearchTerm"
+               class="form-control"
+               placeholder="Search categories" />
+    </div>
+    <div class="col-auto">
+        <select name="pageSize" class="form-select">
+            <option value="12" selected="@(categories.PageSize == 12)">12</option>
+            <option value="25" selected="@(categories.PageSize == 25)">25</option>
+            <option value="50" selected="@(categories.PageSize == 50)">50</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" type="submit">Search</button>
+        <a class="btn btn-secondary" asp-action="Index">Clear</a>
+    </div>
+</form>
 
 <table class="table table-striped">
     <thead>
@@ -26,7 +45,13 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var c in Model)
+        @if (categories.Items.Count == 0)
+        {
+            <tr>
+                <td colspan="4" class="text-muted">No categories found.</td>
+            </tr>
+        }
+        @foreach (var c in categories.Items)
         {
             <tr>
                 <td>@c.Name</td>
@@ -49,3 +74,33 @@
         }
     </tbody>
 </table>
+
+@if (categories.TotalPages > 0)
+{
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="text-muted">
+            Showing page @categories.Page of @categories.TotalPages (@categories.TotalCount total)
+        </div>
+        <nav aria-label="Categories pagination">
+            <ul class="pagination mb-0">
+                <li class="page-item @(categories.HasPreviousPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-page="@previousPage"
+                       asp-route-pageSize="@categories.PageSize"
+                       asp-route-searchTerm="@Model.SearchTerm">Previous</a>
+                </li>
+                <li class="page-item active">
+                    <span class="page-link">@categories.Page</span>
+                </li>
+                <li class="page-item @(categories.HasNextPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-page="@nextPage"
+                       asp-route-pageSize="@categories.PageSize"
+                       asp-route-searchTerm="@Model.SearchTerm">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}

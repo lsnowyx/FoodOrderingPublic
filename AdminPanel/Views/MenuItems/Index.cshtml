@@ -1,15 +1,17 @@
-@model IEnumerable<AdminPanel.Models.MenuItem.MenuItemViewModel>
+@model AdminPanel.Models.MenuItem.MenuItemIndexViewModel
 
 @{
     ViewData["Title"] = "Menu Items";
+    var menuItems = Model.MenuItems;
+    var previousPage = menuItems.Page - 1;
+    var nextPage = menuItems.Page + 1;
+}
+
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 }
 
 <h3>Menu Items</h3>
-
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
 
 <p>
     @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
@@ -17,6 +19,47 @@
         <a class="btn btn-primary" asp-action="Create">Create Menu Item</a>
     }
 </p>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <input type="search"
+               name="searchTerm"
+               value="@Model.SearchTerm"
+               class="form-control"
+               placeholder="Search menu items" />
+    </div>
+    <div class="col-md-3">
+        <select name="categoryId"
+                id="categoryFilter"
+                class="form-select"
+                data-lookup-url="@Url.Action("CategoryLookup", "MenuItems")"
+                data-placeholder="All categories">
+            <option></option>
+            @foreach (var category in Model.Categories)
+            {
+                <option value="@category.Id" selected="@(Model.CategoryId == category.Id)">@category.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="isAvailable" class="form-select">
+            <option value="">Any availability</option>
+            <option value="true" selected="@(Model.IsAvailable == true)">Available</option>
+            <option value="false" selected="@(Model.IsAvailable == false)">Unavailable</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="pageSize" class="form-select">
+            <option value="12" selected="@(menuItems.PageSize == 12)">12</option>
+            <option value="25" selected="@(menuItems.PageSize == 25)">25</option>
+            <option value="50" selected="@(menuItems.PageSize == 50)">50</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" type="submit">Search</button>
+        <a class="btn btn-secondary" asp-action="Index">Clear</a>
+    </div>
+</form>
 
 <table class="table table-striped">
     <thead>
@@ -30,7 +73,13 @@
         </tr>
     </thead>
     <tbody>
-    @foreach (var item in Model)
+    @if (menuItems.Items.Count == 0)
+    {
+        <tr>
+            <td colspan="6" class="text-muted">No menu items found.</td>
+        </tr>
+    }
+    @foreach (var item in menuItems.Items)
     {
         <tr>
             <td>@item.Name</td>
@@ -59,3 +108,70 @@
     }
     </tbody>
 </table>
+
+@if (menuItems.TotalPages > 0)
+{
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="text-muted">
+            Showing page @menuItems.Page of @menuItems.TotalPages (@menuItems.TotalCount total)
+        </div>
+        <nav aria-label="Menu items pagination">
+            <ul class="pagination mb-0">
+                <li class="page-item @(menuItems.HasPreviousPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-page="@previousPage"
+                       asp-route-pageSize="@menuItems.PageSize"
+                       asp-route-searchTerm="@Model.SearchTerm"
+                       asp-route-categoryId="@Model.CategoryId"
+                       asp-route-isAvailable="@Model.IsAvailable">Previous</a>
+                </li>
+                <li class="page-item active">
+                    <span class="page-link">@menuItems.Page</span>
+                </li>
+                <li class="page-item @(menuItems.HasNextPage ? "" : "disabled")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-page="@nextPage"
+                       asp-route-pageSize="@menuItems.PageSize"
+                       asp-route-searchTerm="@Model.SearchTerm"
+                       asp-route-categoryId="@Model.CategoryId"
+                       asp-route-isAvailable="@Model.IsAvailable">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        (function () {
+            const $categoryFilter = $('#categoryFilter');
+            if (!$categoryFilter.length) {
+                return;
+            }
+
+            $categoryFilter.select2({
+                width: '100%',
+                placeholder: $categoryFilter.data('placeholder'),
+                allowClear: true,
+                ajax: {
+                    url: $categoryFilter.data('lookup-url'),
+                    dataType: 'json',
+                    delay: 300,
+                    data: function (params) {
+                        return {
+                            searchTerm: params.term || '',
+                            page: params.page || 1
+                        };
+                    },
+                    processResults: function (data) {
+                        return data;
+                    },
+                    cache: true
+                }
+            });
+        })();
+    </script>
+}

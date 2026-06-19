@@ -42,7 +42,9 @@ public class MenuItemIngredientsController : ControllerBase
     [HttpPut("{ingredientId:guid}")]
     public async Task<IActionResult> Update(Guid menuItemId, Guid ingredientId, UpdateMenuItemIngredientRequest request)
     {
-        var cmd = new UpdateMenuItemIngredientCommand { MenuItemId = menuItemId, IngredientId = ingredientId, Quantity = request.Quantity };
+        var cmd = request.Adapt<UpdateMenuItemIngredientCommand>();
+        cmd.MenuItemId = menuItemId;
+        cmd.IngredientId = ingredientId;
         var result = await _mediator.Send(cmd);
         return Ok(result);
     }

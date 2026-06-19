@@ -7,6 +7,12 @@
 <h3>@Model.Name</h3>
 
 <dl class="row">
+    <dt class="col-sm-2">Base Unit</dt>
+    <dd class="col-sm-10">@Model.BaseUnit</dd>
+
+    <dt class="col-sm-2">Cost per Base Unit</dt>
+    <dd class="col-sm-10">@Model.UnitCost?.ToString("C")</dd>
+
     <dt class="col-sm-2">Allergen Info</dt>
     <dd class="col-sm-10">@Model.AllergenInfo</dd>
 

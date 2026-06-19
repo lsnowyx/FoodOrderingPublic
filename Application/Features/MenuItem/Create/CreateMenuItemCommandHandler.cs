@@ -24,6 +24,7 @@ public class CreateMenuItemCommandHandler : IRequestHandler<CreateMenuItemComman
 
 
         var toAdd = request.Adapt<Domain.Entities.MenuItem>();
+        toAdd.Category = category;
         await _repo.AddAsync(toAdd, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
         return toAdd.Adapt<MenuItemResponse>();

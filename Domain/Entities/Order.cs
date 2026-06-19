@@ -5,8 +5,11 @@ public class Order
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    public Guid CustomerId { get; set; }
-    public User Customer { get; set; } = null!;
+    public Guid? UserId { get; set; }
+    public User? User { get; set; }
+
+    public Guid? GuestCustomerId { get; set; }
+    public GuestCustomer? GuestCustomer { get; set; }
 
     public Guid? AssignedOrderManagerId { get; set; }
     public User? AssignedOrderManager { get; set; }
@@ -26,4 +29,5 @@ public class Order
     public DateTime? UpdatedAt { get; set; }
 
     public List<OrderItem> OrderItems { get; set; } = new();
+    public List<OrderTrackingLink> TrackingLinks { get; set; } = new();
 }

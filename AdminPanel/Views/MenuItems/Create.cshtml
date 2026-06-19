@@ -4,11 +4,29 @@
     ViewData["Title"] = "Create Menu Item";
 }
 
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .select2-container .select2-selection--single {
+            min-height: 38px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 36px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            min-height: 36px;
+        }
+    </style>
+}
+
 <h3>Create Menu Item</h3>
 
 @using (Html.BeginForm())
 {
     @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <div class="form-group mb-2">
         @Html.LabelFor(m => m.Name)
         @Html.TextBoxFor(m => m.Name, new { @class = "form-control" })
@@ -26,9 +44,18 @@
     </div>
     <div class="form-group mb-2">
         @Html.LabelFor(m => m.CategoryId, "Category")
-        @{ var categoriesList = new SelectList((IEnumerable<AdminPanel.Models.Category.CategoryViewModel>)ViewBag.Categories, "Id", "Name"); }
-        <input id="categorySearch" class="form-control mb-1" placeholder="Search categories..." />
-        @Html.DropDownListFor(m => m.CategoryId, categoriesList, "-- select category --", new { @class = "form-control", id = "categorySelect" })
+        <select asp-for="CategoryId"
+                id="categorySelect"
+                class="form-control js-category-lookup"
+                data-lookup-url="@Url.Action("CategoryLookup", "MenuItems")"
+                data-placeholder="Search categories..."
+                required>
+            <option></option>
+            @if (Model.CategoryId != Guid.Empty && !string.IsNullOrWhiteSpace(Model.CategoryName))
+            {
+                <option value="@Model.CategoryId" selected>@Model.CategoryName</option>
+            }
+        </select>
         @Html.ValidationMessageFor(m => m.CategoryId, "", new { @class = "text-danger" })
     </div>
     <div class="form-check mb-3">
@@ -39,15 +66,36 @@
     <a class="btn btn-secondary" asp-action="Index">Cancel</a>
 }
 
-<script>
-document.getElementById('categorySearch')?.addEventListener('input', function(e){
-    const q = (e.target.value || '').toLowerCase();
-    const sel = document.getElementById('categorySelect');
-    if (!sel) return;
-    for (let i=0;i<sel.options.length;i++){
-        const o = sel.options[i];
-        const text = (o.text||'').toLowerCase();
-        o.style.display = q === '' || text.indexOf(q) !== -1 ? '' : 'none';
-    }
-});
-</script>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        (function () {
+            const $categorySelect = $('#categorySelect');
+            if (!$categorySelect.length) {
+                return;
+            }
+
+            $categorySelect.select2({
+                width: '100%',
+                placeholder: $categorySelect.data('placeholder'),
+                allowClear: true,
+                minimumInputLength: 2,
+                ajax: {
+                    url: $categorySelect.data('lookup-url'),
+                    dataType: 'json',
+                    delay: 300,
+                    data: function (params) {
+                        return {
+                            searchTerm: params.term || '',
+                            page: params.page || 1
+                        };
+                    },
+                    processResults: function (data) {
+                        return data;
+                    },
+                    cache: true
+                }
+            });
+        })();
+    </script>
+}

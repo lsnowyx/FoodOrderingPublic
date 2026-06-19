@@ -26,23 +26,23 @@ public class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategoryComman
         await _repo.DeleteAsync(request.Id, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
 
-        try
+        var imageDeleted = true;
+        if (!string.IsNullOrWhiteSpace(publicId))
         {
-            if (!string.IsNullOrWhiteSpace(publicId))
+            try
             {
-                await cloudinaryService.DeleteImageAsync(publicId, cancellationToken);
+                imageDeleted = await cloudinaryService.DeleteImageAsync(publicId, cancellationToken);
+            }
+            catch
+            {
+                imageDeleted = false;
             }
         }
-        catch
-        {
-            // Log this later.
-            // Do not fail the whole operation because the DB delete already succeeded.
-            //Schedule deletion later.
-            return new OperationResponse(true, "Category deleted. Without Cloudinary Deletion");
-        }
 
-        await _repo.DeleteAsync(request.Id, cancellationToken);
-        await _repo.SaveChangesAsync(cancellationToken);
-        return new OperationResponse(true, "Category deleted. With Cloudinary Deletion");
+        return new OperationResponse(
+            true,
+            imageDeleted
+                ? "Category deleted."
+                : "Category deleted, but image cleanup could not be confirmed.");
     }
 }

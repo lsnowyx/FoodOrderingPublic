@@ -1,347 +1,438 @@
-using AdminPanel.Models.MenuItem;
 using AdminPanel.Models.Category;
+using AdminPanel.Models.Common;
+using AdminPanel.Models.Lookup;
+using AdminPanel.Models.MenuItem;
 using AdminPanel.Services;
+using Application.DTOs.Category;
+using Application.DTOs.Common;
+using Application.DTOs.Ingredient;
+using Application.DTOs.MenuItem;
+using Application.DTOs.MenuItemIngredient;
+using Application.DTOs.MenuItemPicture;
+using Application.Features.Category.GetById;
+using Application.Features.Category.Lookup;
+using Application.Features.Ingredient.Lookup;
+using Application.Features.MenuItem.Create;
+using Application.Features.MenuItem.Delete;
+using Application.Features.MenuItem.Get;
+using Application.Features.MenuItem.GetById;
+using Application.Features.MenuItem.Update;
+using Application.Features.MenuItemIngredient.Create;
+using Application.Features.MenuItemIngredient.Delete;
+using Application.Features.MenuItemIngredient.Update;
+using Application.Features.MenuItemPicture.Create;
+using Application.Features.MenuItemPicture.Delete;
+using Application.Features.MenuItemPicture.Update;
 using Common.Constants;
+using Mapster;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AdminPanel.Controllers;
 
-[Authorize]
+[Authorize(AuthorizationPolicyConstants.MENU_MANAGER_POLICY)]
 public class MenuItemsController : Controller
 {
-    private readonly IApiClient _apiClient;
+    private readonly IMediator _mediator;
 
-    public MenuItemsController(IApiClient apiClient)
+    public MenuItemsController(IMediator mediator)
     {
-        _apiClient = apiClient;
+        _mediator = mediator;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        int page = PaginationParameters.DefaultPage,
+        int pageSize = PaginationParameters.DefaultPageSize,
+        string? searchTerm = null,
+        Guid? categoryId = null,
+        bool? isAvailable = null)
     {
-        try
+        var categories = await GetCategoryFilterOptionsAsync(categoryId);
+        var response = await _mediator.Send(new GetMenuItemsQuery
         {
-            var items = await _apiClient.GetAsync<IEnumerable<MenuItemViewModel>>("api/menu-items");
-            var categories = await _apiClient.GetAsync<IEnumerable<CategoryViewModel>>("api/categories");
-            var catDict = categories?.ToDictionary(c => c.Id, c => c.Name) ?? new Dictionary<Guid, string>();
-            var list = (items ?? Enumerable.Empty<MenuItemViewModel>()).Select(i => {
-                i.CategoryName = i.CategoryId != Guid.Empty && catDict.TryGetValue(i.CategoryId, out var n) ? n : null;
-                return i;
-            });
-            return View(list);
-        }
-        catch (UnauthorizedAccessException)
+            Page = page,
+            PageSize = pageSize,
+            SearchTerm = searchTerm,
+            CategoryId = categoryId,
+            IsAvailable = isAvailable
+        });
+
+        var model = new MenuItemIndexViewModel
         {
-            return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index", "MenuItems") });
-        }
-        catch (ForbiddenException)
-        {
-            return RedirectToAction("AccessDenied", "Auth");
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return View(Enumerable.Empty<MenuItemViewModel>());
-        }
+            SearchTerm = searchTerm,
+            CategoryId = categoryId,
+            IsAvailable = isAvailable,
+            Categories = categories,
+            MenuItems = response.Adapt<PaginatedViewModel<MenuItemViewModel>>()
+        };
+
+        return View(model);
     }
 
     public async Task<IActionResult> Details(Guid id)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<MenuItemViewModel>($"api/menu-items/{id}");
-            if (item == null) return NotFound();
-            var categories = await _apiClient.GetAsync<IEnumerable<CategoryViewModel>>("api/categories");
-            item.CategoryName = categories?.FirstOrDefault(c => c.Id == item.CategoryId)?.Name;
+        var response = await _mediator.Send(new GetMenuItemByIdQuery { Id = id });
+        if (response is null) return NotFound();
 
-            var vm = new MenuItemDetailsViewModel { Item = item };
-            vm.Pictures = item.Pictures ?? Enumerable.Empty<MenuItemPictureViewModel>();
-
-            // try to load assigned ingredients and all ingredients for adding
-            try
-            {
-                var assigned = await _apiClient.GetAsync<IEnumerable<MenuItemIngredientViewModel>>($"api/menu-items/{id}/ingredients");
-                vm.Ingredients = assigned ?? Enumerable.Empty<MenuItemIngredientViewModel>();
-
-                var allIngredients = await _apiClient.GetAsync<IEnumerable<AdminPanel.Models.Ingredient.IngredientViewModel>>("api/ingredients");
-                vm.AllIngredients = allIngredients ?? Enumerable.Empty<AdminPanel.Models.Ingredient.IngredientViewModel>();
-            }
-            catch (ForbiddenException)
-            {
-                // user not authorized to manage ingredients; leave lists empty
-            }
-
-            return View(vm);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        return View(response.Adapt<MenuItemDetailsViewModel>());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
-    public async Task<IActionResult> AddIngredient(Guid id, Guid ingredientId, string quantity)
+    public async Task<IActionResult> AddIngredient(
+        Guid id,
+        Guid ingredientId,
+        decimal? quantity)
     {
-        if (ingredientId == Guid.Empty || string.IsNullOrWhiteSpace(quantity))
+        var request = new CreateMenuItemIngredientRequest(ingredientId, quantity);
+        if (!TryValidateForRedirect(request, "Ingredient and quantity are required."))
         {
-            TempData["Error"] = "Ingredient and quantity are required.";
-            return RedirectToAction("Details", new { id });
+            return RedirectToAction(nameof(Details), new { id });
         }
 
-        try
-        {
-            var payload = new { ingredientId = ingredientId, quantity = quantity };
-            var created = await _apiClient.PostAsync<object, MenuItemIngredientViewModel>($"api/menu-items/{id}/ingredients", payload);
-            return RedirectToAction("Details", new { id });
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Details", new { id });
-        }
+        var command = request.Adapt<CreateMenuItemIngredientCommand>();
+        command.MenuItemId = id;
+
+        await _mediator.Send(command);
+        MvcErrorHelper.SetSuccessMessage(TempData, "Ingredient added.");
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
-    public async Task<IActionResult> UpdateIngredient(Guid id, Guid ingredientId, string quantity)
+    public async Task<IActionResult> UpdateIngredient(
+        Guid id,
+        Guid ingredientId,
+        decimal? quantity)
     {
-        if (ingredientId == Guid.Empty || string.IsNullOrWhiteSpace(quantity))
+        var request = new UpdateMenuItemIngredientRequest(quantity);
+        if (!TryValidateForRedirect(request, "Quantity is required."))
         {
-            TempData["Error"] = "Quantity is required.";
-            return RedirectToAction("Details", new { id });
+            return RedirectToAction(nameof(Details), new { id });
         }
 
-        try
-        {
-            var payload = new { quantity = quantity };
-            await _apiClient.PutAsync<object, object>($"api/menu-items/{id}/ingredients/{ingredientId}", payload);
-            return RedirectToAction("Details", new { id });
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Details", new { id });
-        }
+        var command = request.Adapt<UpdateMenuItemIngredientCommand>();
+        command.MenuItemId = id;
+        command.IngredientId = ingredientId;
+
+        await _mediator.Send(command);
+        MvcErrorHelper.SetSuccessMessage(TempData, "Ingredient quantity updated.");
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> DeleteIngredient(Guid id, Guid ingredientId)
     {
-        if (ingredientId == Guid.Empty)
+        var response = await _mediator.Send(new DeleteMenuItemIngredientCommand
         {
-            TempData["Error"] = "Invalid ingredient.";
-            return RedirectToAction("Details", new { id });
+            MenuItemId = id,
+            IngredientId = ingredientId
+        });
+
+        if (response.Success)
+        {
+            MvcErrorHelper.SetSuccessMessage(TempData, response.Message);
+        }
+        else
+        {
+            MvcErrorHelper.SetErrorMessage(TempData, response.Message);
         }
 
-        try
-        {
-            await _apiClient.DeleteAsync($"api/menu-items/{id}/ingredients/{ingredientId}");
-            return RedirectToAction("Details", new { id });
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Details", new { id });
-        }
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> AddPicture(Guid id, MenuItemPictureViewModel model)
     {
-        if (model.ImageFile == null)
+        var request = model.Adapt<MenuItemPictureRequest>();
+        if (!TryValidateForRedirect(request, "Image file is required."))
         {
-            TempData["Error"] = "Image file is required.";
-            return RedirectToAction("Details", new { id });
+            return RedirectToAction(nameof(Details), new { id });
         }
 
-        try
-        {
-            var created = await _apiClient.UploadMenuItemPictureAsync(id, model.ImageFile, model.Caption);
-            TempData["Success"] = "Picture added.";
-            return RedirectToAction("Details", new { id });
-        }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Details", new { id });
-        }
+        var command = request.Adapt<CreateMenuItemPictureCommand>();
+        command.MenuItemId = id;
+
+        await _mediator.Send(command);
+        MvcErrorHelper.SetSuccessMessage(TempData, "Picture added.");
+        return RedirectToAction(nameof(Details), new { id });
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> EditPicture(Guid id, Guid pictureId)
     {
-        try
-        {
-            var pics = await _apiClient.GetAsync<IEnumerable<MenuItemPictureViewModel>>($"api/menu-items/{id}/pictures");
-            var pic = (pics ?? Enumerable.Empty<MenuItemPictureViewModel>()).FirstOrDefault(p => p.Id == pictureId);
-            if (pic == null) return NotFound();
-            return View(pic);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        var menuItem = await _mediator.Send(new GetMenuItemByIdQuery { Id = id });
+        if (menuItem is null) return NotFound();
+
+        var picture = menuItem.Pictures.FirstOrDefault(item => item.Id == pictureId);
+        if (picture is null) return NotFound();
+
+        return View(picture.Adapt<MenuItemPictureViewModel>());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> EditPicture(Guid id, Guid pictureId, MenuItemPictureViewModel model)
     {
         model.MenuItemId = id;
         model.Id = pictureId;
+
         if (!ModelState.IsValid) return View(model);
-        if (model.ImageFile == null)
-        {
-            ModelState.AddModelError(nameof(model.ImageFile), "Image file is required when replacing a picture.");
-            return View(model);
-        }
+
+        var request = model.Adapt<MenuItemPictureRequest>();
+        if (!TryValidateModel(request)) return View(model);
 
         try
         {
-            await _apiClient.UpdateMenuItemPictureAsync(id, pictureId, model.ImageFile, model.Caption);
-            TempData["Success"] = "Picture updated.";
-            return RedirectToAction("Details", new { id });
+            var command = request.Adapt<UpdateMenuItemPictureCommand>();
+            command.MenuItemId = id;
+            command.PictureId = pictureId;
+
+            await _mediator.Send(command);
+            MvcErrorHelper.SetSuccessMessage(TempData, "Picture updated.");
+            return RedirectToAction(nameof(Details), new { id });
         }
-        catch (ApiException ex)
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
         {
-            ApiErrorHelper.AddErrorsToModelState(ModelState, ex.Content);
+            MvcErrorHelper.AddToModelState(ModelState, exception);
             return View(model);
         }
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> DeletePicture(Guid id, Guid pictureId)
     {
-        try
+        var response = await _mediator.Send(new DeleteMenuItemPictureCommand
         {
-            await _apiClient.DeleteAsync($"api/menu-items/{id}/pictures/{pictureId}");
-            TempData["Success"] = "Picture deleted.";
-            return RedirectToAction("Details", new { id });
-        }
-        catch (ApiException ex)
+            MenuItemId = id,
+            PictureId = pictureId
+        });
+
+        if (response.Success)
         {
-            TempData["Error"] = ex.Content ?? ex.Message;
-            return RedirectToAction("Details", new { id });
+            MvcErrorHelper.SetSuccessMessage(TempData, response.Message);
         }
+        else
+        {
+            MvcErrorHelper.SetErrorMessage(TempData, response.Message);
+        }
+
+        return RedirectToAction(nameof(Details), new { id });
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
-    public async Task<IActionResult> Create()
+    public IActionResult Create()
     {
-        var vm = new MenuItemViewModel { IsAvailable = true };
-        var categories = await _apiClient.GetAsync<IEnumerable<CategoryViewModel>>("api/categories");
-        ViewBag.Categories = categories ?? Enumerable.Empty<CategoryViewModel>();
-        return View(vm);
+        return View(new MenuItemViewModel { IsAvailable = true });
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Create(MenuItemViewModel model)
     {
-        var categories = await _apiClient.GetAsync<IEnumerable<CategoryViewModel>>("api/categories");
-        ViewBag.Categories = categories ?? Enumerable.Empty<CategoryViewModel>();
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid)
+        {
+            await ApplyCategoryNameAsync(model);
+            return View(model);
+        }
+
+        var request = model.Adapt<CreateMenuItemRequest>();
+        if (!TryValidateModel(request))
+        {
+            await ApplyCategoryNameAsync(model);
+            return View(model);
+        }
+
         try
         {
-            var payload = new
-            {
-                name = model.Name,
-                description = model.Description,
-                price = model.Price,
-                categoryId = model.CategoryId,
-                isAvailable = model.IsAvailable
-            };
-            var created = await _apiClient.PostAsync<object, MenuItemViewModel>("api/menu-items", payload);
-            if (created == null) return RedirectToAction("Index");
+            var command = request.Adapt<CreateMenuItemCommand>();
+            var response = await _mediator.Send(command);
 
-            TempData["Success"] = "Menu item created. Add pictures from this page.";
-            return RedirectToAction("Details", new { id = created.Id });
+            MvcErrorHelper.SetSuccessMessage(
+                TempData,
+                "Menu item created. Add pictures from this page.");
+            return RedirectToAction(nameof(Details), new { id = response.Id });
         }
-        catch (ApiException ex)
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
         {
-            ApiErrorHelper.AddErrorsToModelState(ModelState, ex.Content);
+            MvcErrorHelper.AddToModelState(ModelState, exception);
+            await ApplyCategoryNameAsync(model);
             return View(model);
         }
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Edit(Guid id)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<MenuItemViewModel>($"api/menu-items/{id}");
-            if (item == null) return NotFound();
-            var categories = await _apiClient.GetAsync<IEnumerable<CategoryViewModel>>("api/categories");
-            ViewBag.Categories = categories ?? Enumerable.Empty<CategoryViewModel>();
-            return View(item);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        var response = await _mediator.Send(new GetMenuItemByIdQuery { Id = id });
+        if (response is null) return NotFound();
+
+        return View(response.Adapt<MenuItemViewModel>());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Edit(Guid id, MenuItemViewModel model)
     {
-        var categories = await _apiClient.GetAsync<IEnumerable<CategoryViewModel>>("api/categories");
-        ViewBag.Categories = categories ?? Enumerable.Empty<CategoryViewModel>();
-        if (!ModelState.IsValid) return View(model);
+        model.Id = id;
+
+        if (!ModelState.IsValid)
+        {
+            await ApplyCategoryNameAsync(model);
+            return View(model);
+        }
+
+        var request = model.Adapt<UpdateMenuItemRequest>();
+        if (!TryValidateModel(request))
+        {
+            await ApplyCategoryNameAsync(model);
+            return View(model);
+        }
+
         try
         {
-            var payload = new
-            {
-                name = model.Name,
-                description = model.Description,
-                price = model.Price,
-                categoryId = model.CategoryId,
-                isAvailable = model.IsAvailable
-            };
-            var updated = await _apiClient.PutAsync<object, MenuItemViewModel>($"api/menu-items/{id}", payload);
-            return RedirectToAction("Index");
+            var command = request.Adapt<UpdateMenuItemCommand>();
+            command.Id = id;
+
+            await _mediator.Send(command);
+            MvcErrorHelper.SetSuccessMessage(TempData, "Menu item updated.");
+            return RedirectToAction(nameof(Index));
         }
-        catch (ApiException ex)
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
         {
-            ApiErrorHelper.AddErrorsToModelState(ModelState, ex.Content);
+            MvcErrorHelper.AddToModelState(ModelState, exception);
+            await ApplyCategoryNameAsync(model);
             return View(model);
         }
     }
 
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        try
-        {
-            var item = await _apiClient.GetAsync<MenuItemViewModel>($"api/menu-items/{id}");
-            if (item == null) return NotFound();
-            var categories = await _apiClient.GetAsync<IEnumerable<CategoryViewModel>>("api/categories");
-            item.CategoryName = categories?.FirstOrDefault(c => c.Id == item.CategoryId)?.Name;
-            return View(item);
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return NotFound();
-        }
+        var response = await _mediator.Send(new GetMenuItemByIdQuery { Id = id });
+        if (response is null) return NotFound();
+
+        return View(response.Adapt<MenuItemViewModel>());
     }
 
     [HttpPost]
-    [Authorize(Roles = UserRoleConstants.MENU_MANAGER_ROLE)]
     public async Task<IActionResult> DeleteConfirmed(Guid id)
     {
-        try
+        OperationResponse response = await _mediator.Send(new DeleteMenuItemCommand { Id = id });
+        if (!response.Success)
         {
-            await _apiClient.DeleteAsync($"api/menu-items/{id}");
-            return RedirectToAction("Index");
+            MvcErrorHelper.SetErrorMessage(TempData, response.Message);
+            return RedirectToAction(nameof(Delete), new { id });
         }
-        catch (ApiException ex)
-        {
-            TempData["Error"] = ex.Content ?? "Failed to delete menu item.";
-            return RedirectToAction("Delete", new { id });
-        }
+
+        MvcErrorHelper.SetSuccessMessage(TempData, response.Message);
+        return RedirectToAction(nameof(Index));
     }
+
+    [HttpGet]
+    public async Task<IActionResult> CategoryLookup(
+        string? searchTerm = null,
+        int page = PaginationParameters.DefaultPage)
+    {
+        var response = await _mediator.Send(new GetCategoryLookupQuery
+        {
+            SearchTerm = searchTerm,
+            Page = page,
+            PageSize = PaginationParameters.LookupPageSize
+        });
+
+        return Json(ToSelect2Response(response));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> IngredientLookup(
+        string? searchTerm = null,
+        int page = PaginationParameters.DefaultPage)
+    {
+        var response = await _mediator.Send(new GetIngredientLookupQuery
+        {
+            SearchTerm = searchTerm,
+            Page = page,
+            PageSize = PaginationParameters.LookupPageSize
+        });
+
+        return Json(ToSelect2Response(response));
+    }
+
+    private async Task<IReadOnlyList<CategoryViewModel>> GetCategoryFilterOptionsAsync(Guid? categoryId)
+    {
+        if (!categoryId.HasValue)
+        {
+            return Array.Empty<CategoryViewModel>();
+        }
+
+        var category = await _mediator.Send(new GetCategoryByIdQuery { Id = categoryId.Value });
+        return category is null
+            ? Array.Empty<CategoryViewModel>()
+            : new[] { category.Adapt<CategoryViewModel>() };
+    }
+
+    private async Task ApplyCategoryNameAsync(MenuItemViewModel menuItem)
+    {
+        if (menuItem.CategoryId == Guid.Empty)
+        {
+            return;
+        }
+
+        var category = await _mediator.Send(new GetCategoryByIdQuery { Id = menuItem.CategoryId });
+        menuItem.CategoryName = category?.Name;
+    }
+
+    private bool TryValidateForRedirect(object request, string fallbackMessage)
+    {
+        if (TryValidateModel(request))
+        {
+            return true;
+        }
+
+        var message = ModelState.Values
+            .SelectMany(value => value.Errors)
+            .Select(error => error.ErrorMessage)
+            .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
+            ?? fallbackMessage;
+
+        MvcErrorHelper.SetErrorMessage(TempData, message);
+        return false;
+    }
+
+    private static Select2LookupResponseViewModel ToSelect2Response(
+        PaginatedResponse<CategoryLookupResponse> categories)
+    {
+        return new Select2LookupResponseViewModel
+        {
+            Results = categories.Items
+                .Select(category => new Select2LookupItemViewModel
+                {
+                    Id = category.Id.ToString(),
+                    Text = category.Text,
+                    Description = category.Description
+                })
+                .ToList(),
+            Pagination = new Select2PaginationViewModel
+            {
+                More = categories.Page < categories.TotalPages
+            }
+        };
+    }
+
+    private static Select2LookupResponseViewModel ToSelect2Response(
+        PaginatedResponse<IngredientLookupResponse> ingredients)
+    {
+        return new Select2LookupResponseViewModel
+        {
+            Results = ingredients.Items
+                .Select(ingredient => new Select2LookupItemViewModel
+                {
+                    Id = ingredient.Id.ToString(),
+                    Text = ingredient.Text,
+                    BaseUnit = ingredient.BaseUnit,
+                    UnitCost = ingredient.UnitCost,
+                    AllergenInfo = ingredient.AllergenInfo,
+                    CaloriesPerUnit = ingredient.CaloriesPerUnit
+                })
+                .ToList(),
+            Pagination = new Select2PaginationViewModel
+            {
+                More = ingredients.Page < ingredients.TotalPages
+            }
+        };
+    }
+
 }

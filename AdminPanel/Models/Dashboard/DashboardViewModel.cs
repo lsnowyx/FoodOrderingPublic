@@ -6,6 +6,7 @@ public class DashboardViewModel
 {
     public bool IsMenuManager { get; set; }
     public bool IsOrderManager { get; set; }
+    public bool ShowOrderSummary { get; set; }
     public string? UserName { get; set; }
 
     public int TotalOrders { get; set; }

@@ -1,18 +1,39 @@
 @model AdminPanel.Models.MenuItem.MenuItemDetailsViewModel
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Menu Item Details";
 }
 
-<h3>@Model.Item.Name</h3>
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .select2-container .select2-selection--single {
+            min-height: 38px;
+        }
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success">@TempData["Success"]</div>
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 36px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            min-height: 36px;
+        }
+    </style>
 }
 
+<h3>@Model.Item.Name</h3>
+
+<div asp-validation-summary="All" class="text-danger mb-3"></div>
+
 <div class="mb-3">
-    <strong>Price:</strong> @Model.Item.Price.ToString("C")
+    <strong>Selling price:</strong> @Model.Item.Price.ToString("C")
+</div>
+<div class="mb-3">
+    <strong>Restaurant cost:</strong> @Model.Item.RestaurantCost.ToString("C")
+</div>
+<div class="mb-3">
+    <strong>Total calories:</strong> @Model.Item.TotalCalories.ToString("0.##") kcal
 </div>
 <div class="mb-3">
     <strong>Category:</strong> @Model.Item.CategoryName
@@ -40,9 +61,13 @@
         <thead>
             <tr>
                 <th>Ingredient</th>
+                <th>Base unit</th>
+                <th>Unit cost</th>
                 <th>Allergen</th>
                 <th>Calories</th>
                 <th>Quantity</th>
+                <th>Line cost</th>
+                <th>Line calories</th>
                 <th></th>
             </tr>
         </thead>
@@ -51,16 +76,27 @@
         {
             <tr>
                 <td>@ing.IngredientName</td>
+                <td>@ing.BaseUnit</td>
+                <td>@ing.UnitCost.ToString("C")</td>
                 <td>@ing.AllergenInfo</td>
                 <td>@(ing.CaloriesPerUnit?.ToString() ?? "-")</td>
                 <td>
                     <form asp-action="UpdateIngredient" method="post" class="d-inline">
                         <input type="hidden" name="id" value="@Model.Item.Id" />
                         <input type="hidden" name="ingredientId" value="@ing.IngredientId" />
-                        <input name="quantity" class="form-control d-inline" style="width:150px;display:inline-block" value="@ing.Quantity" />
+                        <input name="quantity"
+                               type="number"
+                               min="0.01"
+                               step="0.01"
+                               required
+                               class="form-control d-inline"
+                               style="width:150px;display:inline-block"
+                               value="@ing.Quantity.ToString(CultureInfo.InvariantCulture)" />
                         <button class="btn btn-sm btn-primary ms-2" type="submit">Save</button>
                     </form>
                 </td>
+                <td>@ing.LineCost.ToString("C")</td>
+                <td>@ing.LineCalories.ToString("0.##") kcal</td>
                 <td>
                     <form asp-action="DeleteIngredient" method="post" onsubmit="return confirm('Remove ingredient?');">
                         <input type="hidden" name="id" value="@Model.Item.Id" />
@@ -83,17 +119,24 @@ else
     <h5>Add Ingredient</h5>
     <form asp-action="AddIngredient" method="post" class="row g-2">
         <input type="hidden" name="id" value="@Model.Item.Id" />
-        <div class="col-auto">
-            <select name="ingredientId" class="form-select" required>
-                <option value="">-- select ingredient --</option>
-                @foreach (var a in Model.AllIngredients)
-                {
-                    <option value="@a.Id">@a.Name</option>
-                }
+        <div class="col-md-5">
+            <select id="ingredientSelect"
+                    name="ingredientId"
+                    class="form-select js-ingredient-lookup"
+                    data-lookup-url="@Url.Action("IngredientLookup", "MenuItems")"
+                    data-placeholder="Search ingredients..."
+                    required>
+                <option></option>
             </select>
         </div>
         <div class="col-auto">
-            <input name="quantity" class="form-control" placeholder="Quantity (e.g. 200g)" required />
+            <input name="quantity"
+                   type="number"
+                   min="0.01"
+                   step="0.01"
+                   class="form-control"
+                   placeholder="Base units (e.g. 0.5, 1, 2)"
+                   required />
         </div>
         <div class="col-auto">
             <button class="btn btn-success" type="submit">Add</button>
@@ -163,6 +206,72 @@ else
     @if (User.IsInRole(UserRoleConstants.MENU_MANAGER_ROLE))
     {
         <a class="btn btn-warning" asp-action="Edit" asp-route-id="@Model.Item.Id">Edit</a>
-        <a class="btn btn-primary" href="#pictures">Manage Pictures</a>
     }
 </p>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        (function () {
+            const $ingredientSelect = $('#ingredientSelect');
+            if (!$ingredientSelect.length) {
+                return;
+            }
+
+            function formatIngredient(item) {
+                if (item.loading) {
+                    return item.text;
+                }
+
+                const $container = $('<div>');
+                $('<div>').text(item.text).appendTo($container);
+
+                const details = [];
+                if (item.allergenInfo) {
+                    details.push('Allergen: ' + item.allergenInfo);
+                }
+
+                if (item.caloriesPerUnit !== null && item.caloriesPerUnit !== undefined) {
+                    details.push(item.caloriesPerUnit + ' calories/unit');
+                }
+
+                if (item.baseUnit) {
+                    details.push('Base unit: ' + item.baseUnit);
+                }
+
+                if (item.unitCost !== null && item.unitCost !== undefined) {
+                    details.push('Cost/base unit: ' + item.unitCost);
+                }
+
+                if (details.length > 0) {
+                    $('<small>').addClass('text-muted').text(details.join(' | ')).appendTo($container);
+                }
+
+                return $container;
+            }
+
+            $ingredientSelect.select2({
+                width: '100%',
+                placeholder: $ingredientSelect.data('placeholder'),
+                allowClear: true,
+                minimumInputLength: 2,
+                templateResult: formatIngredient,
+                ajax: {
+                    url: $ingredientSelect.data('lookup-url'),
+                    dataType: 'json',
+                    delay: 300,
+                    data: function (params) {
+                        return {
+                            searchTerm: params.term || '',
+                            page: params.page || 1
+                        };
+                    },
+                    processResults: function (data) {
+                        return data;
+                    },
+                    cache: true
+                }
+            });
+        })();
+    </script>
+}

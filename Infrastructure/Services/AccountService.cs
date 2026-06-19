@@ -30,26 +30,41 @@ public class AccountService : IAccountService
 
         if (user is null || !await userManager.CheckPasswordAsync(user, loginCommand.Password))
         {
-            throw new Exception("Invalid login");
+            throw new UnauthorizedAccessException("Invalid username or password.");
         }
 
         var roles = await userManager.GetRolesAsync(user);
+        if (roles.Count == 0)
+        {
+            throw new InvalidOperationException("The account has no assigned role.");
+        }
 
         var args = new AccessTokenRequest(roles.First(), user.Id);
 
         string jwt = jwtBearerService.GenerateAccessToken(args);
-        var result = new LoginResponse(jwt, roles.First());
+        var result = new LoginResponse(jwt, roles.First(), user.Id);
 
         return result;
     }
 
     public async Task<CreateAccountResponse> CreateAccount(CreateAccountCommand createAccountCommand)
     {
+        var role = UserRoleConstants.ROLES.FirstOrDefault(
+            allowedRole => string.Equals(
+                allowedRole,
+                createAccountCommand.Role,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (role is null || role == UserRoleConstants.ADMIN_ROLE)
+        {
+            throw new InvalidOperationException("The requested account role cannot be created.");
+        }
+
         var existingUser = await userManager.FindByNameAsync(createAccountCommand.UserName);
 
         if (existingUser != null)
         {
-            throw new Exception("User with such name already exists");
+            throw new InvalidOperationException("User with such name already exists.");
         }
 
         var user = createAccountCommand.Adapt<User>();
@@ -59,18 +74,19 @@ public class AccountService : IAccountService
         if (!createResult.Succeeded)
         {
             var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-            throw new Exception($"Failed to create user: {errors}");
+            throw new InvalidOperationException($"Failed to create user: {errors}");
         }
 
-        var addRoleResult = await userManager.AddToRoleAsync(user, createAccountCommand.Role);
+        var addRoleResult = await userManager.AddToRoleAsync(user, role);
 
         if (!addRoleResult.Succeeded)
         {
+            await userManager.DeleteAsync(user);
             var errors = string.Join(", ", addRoleResult.Errors.Select(e => e.Description));
-            throw new Exception($"Failed to add user to role: {errors}");
+            throw new InvalidOperationException($"Failed to add user to role: {errors}");
         }
 
-        return new CreateAccountResponse(user.UserName!, createAccountCommand.Role);
+        return new CreateAccountResponse(user.UserName!, role);
     }
 
     public async Task<List<GetAccountReponse>> GetWorkers()

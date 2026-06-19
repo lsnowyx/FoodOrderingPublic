@@ -5,11 +5,11 @@ using Application.Features.Request.Complete;
 using Application.Features.Request.Create;
 using Application.Features.Request.Get;
 using Common.Constants;
+using Common.Extensions;
 using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using WebApi.Extensions;
 
 namespace WebApi.Controllers;
 
@@ -29,7 +29,7 @@ public class RequestsController : Controller
     public async Task<IActionResult> CreateRequest(CreateRequestRequest createRequest)
     {
         var request = createRequest.Adapt<CreateRequestCommand>();
-        request.ClientId = Guid.Parse(User.GetUserId());
+        request.ClientId = User.GetUserId();
         CreateRequestResponse result = await mediator.Send(request);
         return Ok(result);
     }
@@ -50,7 +50,7 @@ public class RequestsController : Controller
     [Authorize]
     public async Task<IActionResult> GetRequests()
     {
-        List<GetRequest3> result = await mediator.Send(new GetRequestCommand(User.GetRole(), Guid.Parse(User.GetUserId())));
+        List<GetRequest3> result = await mediator.Send(new GetRequestCommand(User.GetRole(), User.GetUserId()));
         return Ok(result);
     }
 
@@ -58,7 +58,7 @@ public class RequestsController : Controller
     [Authorize(AuthorizationPolicyConstants.WORKER_POLICY)]
     public async Task<IActionResult> CompleteRequest(Guid requestId)
     {
-        var request = new CompleteRequestCommand(Guid.Parse(User.GetUserId()), requestId);
+        var request = new CompleteRequestCommand(User.GetUserId(), requestId);
 
         GetRequestReponse result = await mediator.Send(request);
         return Ok(result);

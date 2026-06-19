@@ -15,6 +15,7 @@
 
 <form asp-action="EditPicture" asp-route-id="@Model.MenuItemId" asp-route-pictureId="@Model.Id" method="post" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
     @Html.HiddenFor(m => m.Id)
     @Html.HiddenFor(m => m.MenuItemId)
     @Html.HiddenFor(m => m.ImageUrl)

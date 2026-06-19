@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.DTOs.Order;
+using Common.Enums;
 using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -21,18 +22,18 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
 
     public async Task<OrderResponse> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
-        var customer = await userManager.FindByIdAsync(request.CustomerId.ToString());
-        if (customer == null) throw new KeyNotFoundException("Customer not found");
+        if (request.UserId == null) throw new ArgumentException("UserId is required for registered customer orders");
 
-        if (request.Items == null || request.Items.Count == 0) throw new ArgumentException("Items required");
+        var customer = await userManager.FindByIdAsync(request.UserId.Value.ToString());
+        if (customer == null) throw new KeyNotFoundException("Customer not found");
 
         var order = new Domain.Entities.Order
         {
-            CustomerId = request.CustomerId,
+            UserId = request.UserId,
             OrderDate = DateTime.UtcNow,
-            Status = Common.Enums.OrderStatus.Pending,
+            Status = OrderStatus.Pending,
             IsPaid = false,
-            DeliveryAddress = request.DeliveryAddress,
+            DeliveryAddress = request.DeliveryAddress.Trim(),
             DeliveryLatitude = request.DeliveryLatitude,
             DeliveryLongitude = request.DeliveryLongitude,
             OrderItems = new List<OrderItem>()
@@ -42,6 +43,8 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
         {
             var menu = await _menuRepo.GetByIdAsync(it.MenuItemId, cancellationToken);
             if (menu == null) throw new KeyNotFoundException($"MenuItem not found: {it.MenuItemId}");
+            if (!menu.IsAvailable)
+                throw new ArgumentException($"Menu item is unavailable: {it.MenuItemId}");
 
             var oi = new OrderItem
             {

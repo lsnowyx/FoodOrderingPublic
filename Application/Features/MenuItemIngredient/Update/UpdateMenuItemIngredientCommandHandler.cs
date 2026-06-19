@@ -1,5 +1,8 @@
+using Application.Abstractions.Persistence;
 using Application.Abstractions.Repositories;
+using Application.Abstractions.Services;
 using Application.DTOs.MenuItemIngredient;
+using Mapster;
 using MediatR;
 
 namespace Application.Features.MenuItemIngredient.Update;
@@ -7,32 +10,46 @@ namespace Application.Features.MenuItemIngredient.Update;
 public class UpdateMenuItemIngredientCommandHandler : IRequestHandler<UpdateMenuItemIngredientCommand, MenuItemIngredientResponse>
 {
     private readonly IMenuItemIngredientsRepository _repo;
-    private readonly Application.Abstractions.Repositories.IMenuItemsRepository _menuRepo;
+    private readonly IMenuItemsRepository _menuRepo;
+    private readonly IMenuItemCostService _menuItemCostService;
+    private readonly IApplicationTransaction _transaction;
 
-    public UpdateMenuItemIngredientCommandHandler(IMenuItemIngredientsRepository repo, Application.Abstractions.Repositories.IMenuItemsRepository menuRepo)
+    public UpdateMenuItemIngredientCommandHandler(
+        IMenuItemIngredientsRepository repo,
+        IMenuItemsRepository menuRepo,
+        IMenuItemCostService menuItemCostService,
+        IApplicationTransaction transaction)
     {
         _repo = repo;
         _menuRepo = menuRepo;
+        _menuItemCostService = menuItemCostService;
+        _transaction = transaction;
     }
 
     public async Task<MenuItemIngredientResponse> Handle(UpdateMenuItemIngredientCommand request, CancellationToken cancellationToken)
     {
-        var menu = await _menuRepo.GetByIdAsync(request.MenuItemId, cancellationToken);
-        if (menu == null) throw new KeyNotFoundException("Menu item not found");
+        return await _transaction.ExecuteAsync(async transactionCancellationToken =>
+        {
+            var menu = await _menuRepo.GetByIdAsync(
+                request.MenuItemId,
+                transactionCancellationToken);
+            if (menu == null) throw new KeyNotFoundException("Menu item not found");
 
-        var entity = await _repo.GetByMenuItemAndIngredientAsync(request.MenuItemId, request.IngredientId, cancellationToken);
-        if (entity == null) throw new KeyNotFoundException("Menu item ingredient not found");
+            var entity = await _repo.GetByMenuItemAndIngredientAsync(
+                request.MenuItemId,
+                request.IngredientId,
+                transactionCancellationToken);
+            if (entity == null) throw new KeyNotFoundException("Menu item ingredient not found");
 
-        entity.Quantity = request.Quantity;
+            entity.Quantity = request.Quantity;
 
-        await _repo.UpdateAsync(entity, cancellationToken);
-        await _repo.SaveChangesAsync(cancellationToken);
-        return new MenuItemIngredientResponse(
-            entity.Id,
-            entity.IngredientId,
-            entity.Ingredient?.Name ?? string.Empty,
-            entity.Ingredient?.AllergenInfo,
-            entity.Ingredient?.CaloriesPerUnit,
-            entity.Quantity ?? string.Empty);
+            await _repo.UpdateAsync(entity, transactionCancellationToken);
+            await _repo.SaveChangesAsync(transactionCancellationToken);
+            await _menuItemCostService.RecalculateMenuItemCostAsync(
+                request.MenuItemId,
+                transactionCancellationToken);
+
+            return entity.Adapt<MenuItemIngredientResponse>();
+        }, cancellationToken);
     }
 }

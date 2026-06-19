@@ -30,6 +30,25 @@ public class IngredientsRepository : IIngredientsRepository
         return await _context.Ingredients.ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Ingredient>> GetPagedAsync(
+        int skip,
+        int take,
+        string? searchTerm,
+        CancellationToken cancellationToken = default)
+    {
+        return await ApplySearch(GetIngredientQuery(), searchTerm)
+            .OrderBy(i => i.Name)
+            .ThenBy(i => i.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountAsync(string? searchTerm, CancellationToken cancellationToken = default)
+    {
+        return await ApplySearch(GetIngredientQuery(), searchTerm).CountAsync(cancellationToken);
+    }
+
     public Task UpdateAsync(Ingredient ingredient, CancellationToken cancellationToken = default)
     {
         _context.Ingredients.Update(ingredient);
@@ -53,5 +72,25 @@ public class IngredientsRepository : IIngredientsRepository
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private IQueryable<Ingredient> GetIngredientQuery()
+    {
+        return _context.Ingredients.AsNoTracking();
+    }
+
+    private static IQueryable<Ingredient> ApplySearch(IQueryable<Ingredient> query, string? searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return query;
+        }
+
+        var trimmedSearchTerm = searchTerm.Trim();
+
+        return query.Where(ingredient =>
+            ingredient.Name.Contains(trimmedSearchTerm)
+            || ingredient.BaseUnit.Contains(trimmedSearchTerm)
+            || (ingredient.AllergenInfo != null && ingredient.AllergenInfo.Contains(trimmedSearchTerm)));
     }
 }
