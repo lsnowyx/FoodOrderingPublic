@@ -1,4 +1,6 @@
-﻿using Mapster;
+using Application.Caching;
+using Mapster;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
@@ -16,6 +18,7 @@ public static class ApplicationExtension
         {
             config.RegisterServicesFromAssembly(applicationAssembly);
         });
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CachedQueryBehavior<,>));
 
         var mappingConfig = TypeAdapterConfig.GlobalSettings;
         mappingConfig.Scan(applicationAssembly);

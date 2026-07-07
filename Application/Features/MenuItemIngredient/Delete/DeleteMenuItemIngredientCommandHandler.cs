@@ -1,6 +1,7 @@
 using Application.Abstractions.Persistence;
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.Common;
 using MediatR;
 
@@ -12,17 +13,20 @@ public class DeleteMenuItemIngredientCommandHandler : IRequestHandler<DeleteMenu
     private readonly IMenuItemsRepository _menuRepo;
     private readonly IMenuItemCostService _menuItemCostService;
     private readonly IApplicationTransaction _transaction;
+    private readonly ICacheService _cacheService;
 
     public DeleteMenuItemIngredientCommandHandler(
         IMenuItemIngredientsRepository repo,
         IMenuItemsRepository menuRepo,
         IMenuItemCostService menuItemCostService,
-        IApplicationTransaction transaction)
+        IApplicationTransaction transaction,
+        ICacheService cacheService)
     {
         _repo = repo;
         _menuRepo = menuRepo;
         _menuItemCostService = menuItemCostService;
         _transaction = transaction;
+        _cacheService = cacheService;
     }
 
     public async Task<OperationResponse> Handle(DeleteMenuItemIngredientCommand request, CancellationToken cancellationToken)
@@ -44,6 +48,9 @@ public class DeleteMenuItemIngredientCommandHandler : IRequestHandler<DeleteMenu
             await _repo.SaveChangesAsync(transactionCancellationToken);
             await _menuItemCostService.RecalculateMenuItemCostAsync(
                 request.MenuItemId,
+                transactionCancellationToken);
+            await CacheInvalidationHelper.InvalidateMenuItemCachesAsync(
+                _cacheService,
                 transactionCancellationToken);
 
             return new OperationResponse(true, "Menu item ingredient deleted.");

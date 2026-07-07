@@ -28,13 +28,41 @@ public class UpdateOrderPaymentCommandHandler : IRequestHandler<UpdateOrderPayme
                 || order.Status == OrderStatus.OutForDelivery))
             throw new InvalidOperationException("Paid orders cannot be marked as unpaid.");
 
-        order.IsPaid = request.IsPaid;
-        if (request.IsPaid && order.Status == OrderStatus.Pending)
+        if (request.IsPaid && order.PaymentMethod == PaymentMethod.OnlineCard)
         {
-            order.Status = OrderStatus.Paid;
+            throw new InvalidOperationException("Online card payments must be confirmed by Stripe.");
         }
 
-        order.UpdatedAt = DateTime.UtcNow;
+        if (request.IsPaid && order.PaymentMethod != PaymentMethod.CashOnDelivery)
+        {
+            throw new InvalidOperationException("Only cash on delivery orders can be manually marked as paid.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        if (request.IsPaid)
+        {
+            order.IsPaid = true;
+            order.PaymentStatus = PaymentStatus.Paid;
+            order.PaidAt ??= now;
+
+            if (order.Status == OrderStatus.Pending)
+            {
+                order.Status = OrderStatus.Paid;
+            }
+        }
+        else
+        {
+            order.IsPaid = false;
+
+            if (order.PaymentMethod == PaymentMethod.CashOnDelivery)
+            {
+                order.PaymentStatus = PaymentStatus.Unpaid;
+                order.PaidAt = null;
+            }
+        }
+
+        order.UpdatedAt = now;
 
         await _repo.UpdateAsync(order, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);

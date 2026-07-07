@@ -16,7 +16,7 @@ public class IngredientViewModel
     public string BaseUnit { get; set; } = string.Empty;
 
     [Required]
-    [Range(typeof(decimal), "0", "99999999999999.9999")]
+    [Range(typeof(decimal), "0", "99999999999999.9999", ParseLimitsInInvariantCulture = true)]
     [Display(Name = "Cost per Base Unit")]
     public decimal? UnitCost { get; set; }
 

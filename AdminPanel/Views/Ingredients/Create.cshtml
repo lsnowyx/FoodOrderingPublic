@@ -6,6 +6,25 @@
 
 <h3>Create Ingredient</h3>
 
+<div class="mb-4">
+    <label for="nutritionSearchQuery" class="form-label">Nutrition Lookup</label>
+    <div class="input-group">
+        <input
+            id="nutritionSearchQuery"
+            type="search"
+            class="form-control"
+            placeholder="Search generic ingredients, for example egg, beef, or rice"
+            autocomplete="off"
+            data-search-url="@Url.Action("NutritionSearch", "Ingredients")" />
+        <button id="nutritionSearchButton" type="button" class="btn btn-outline-primary">Search</button>
+    </div>
+    <div class="form-text">
+        Use generic ingredient names for calorie suggestions. Nutrition lookup fills name, base unit, and calories; allergen info should be reviewed manually.
+    </div>
+    <div id="nutritionSearchStatus" class="form-text"></div>
+    <div id="nutritionSearchResults" class="list-group mt-2"></div>
+</div>
+
 @using (Html.BeginForm())
 {
     @Html.AntiForgeryToken()
@@ -41,4 +60,115 @@
     </div>
     <button class="btn btn-primary">Create</button>
     <a class="btn btn-secondary" asp-action="Index">Cancel</a>
+}
+
+@section Scripts {
+    <script>
+        (() => {
+            const queryInput = document.getElementById('nutritionSearchQuery');
+            const searchButton = document.getElementById('nutritionSearchButton');
+            const status = document.getElementById('nutritionSearchStatus');
+            const results = document.getElementById('nutritionSearchResults');
+            const nameInput = document.getElementById('Name');
+            const baseUnitInput = document.getElementById('BaseUnit');
+            const caloriesInput = document.getElementById('CaloriesPerUnit');
+
+            const clearResults = () => {
+                results.replaceChildren();
+            };
+
+            const setStatus = (message, isError = false) => {
+                status.textContent = message;
+                status.classList.toggle('text-danger', isError);
+            };
+
+            const formatDetails = (item) => {
+                const details = [];
+                if (item.brandName) details.push(item.brandName);
+                if (item.dataType) details.push(item.dataType);
+                details.push(item.caloriesPerUnit === null || item.caloriesPerUnit === undefined
+                    ? `${item.baseUnit}, calories unavailable`
+                    : `${item.caloriesPerUnit} kcal per ${item.baseUnit}`);
+                return details.join(' | ');
+            };
+
+            const applySuggestion = (item) => {
+                nameInput.value = item.name ?? '';
+                baseUnitInput.value = item.baseUnit ?? '100g';
+                caloriesInput.value = item.caloriesPerUnit ?? '';
+                setStatus('Suggestion applied. Unit cost and allergen info still need your review.');
+            };
+
+            const renderResults = (items) => {
+                clearResults();
+                if (!items.length) {
+                    setStatus('No suggestions found.');
+                    return;
+                }
+
+                setStatus(`${items.length} suggestion${items.length === 1 ? '' : 's'} found.`);
+                for (const item of items) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'list-group-item list-group-item-action';
+
+                    const title = document.createElement('div');
+                    title.className = 'fw-semibold';
+                    title.textContent = item.name;
+
+                    const details = document.createElement('div');
+                    details.className = 'small text-muted';
+                    details.textContent = formatDetails(item);
+
+                    button.append(title, details);
+                    button.addEventListener('click', () => applySuggestion(item));
+                    results.appendChild(button);
+                }
+            };
+
+            const search = async () => {
+                const query = queryInput.value.trim();
+                clearResults();
+
+                if (query.length < 2) {
+                    setStatus('Enter at least 2 characters.', true);
+                    return;
+                }
+
+                setStatus('Searching...');
+                searchButton.disabled = true;
+
+                try {
+                    const url = new URL(queryInput.dataset.searchUrl, window.location.origin);
+                    url.searchParams.set('query', query);
+                    url.searchParams.set('pageSize', '10');
+
+                    const response = await fetch(url, {
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!response.ok) {
+                        const message = await response.text();
+                        setStatus(message || 'Nutrition lookup failed.', true);
+                        return;
+                    }
+
+                    const items = await response.json();
+                    renderResults(items);
+                } catch {
+                    setStatus('Nutrition lookup failed. Please try again later.', true);
+                } finally {
+                    searchButton.disabled = false;
+                }
+            };
+
+            searchButton.addEventListener('click', search);
+            queryInput.addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    search();
+                }
+            });
+        })();
+    </script>
 }

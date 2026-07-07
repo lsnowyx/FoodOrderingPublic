@@ -12,6 +12,6 @@ public sealed class UpdateMenuItemIngredientCommand : IRequest<MenuItemIngredien
     [Required]
     public Guid IngredientId { get; set; }
 
-    [Range(typeof(decimal), "0.0001", "99999999999999.9999")]
+    [Range(typeof(decimal), "0.0001", "99999999999999.9999", ParseLimitsInInvariantCulture = true)]
     public decimal Quantity { get; set; }
 }

@@ -10,9 +10,13 @@ public static class PresentationExtension
     public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddControllers();
+        services.AddSignalR();
         services.AddEndpointsApiExplorer();
         services.AddSwagger();
         services.AddCors();
+        services.AddScoped<
+            global::Application.Abstractions.Services.IDeliveryTrackingBroadcaster,
+            global::WebApi.Services.DeliveryTrackingBroadcaster>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
         return services;

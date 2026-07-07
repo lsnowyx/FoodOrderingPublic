@@ -16,8 +16,9 @@ public class CheckoutMappingConfig : IRegister
             .Map(dest => dest.OrderId, src => src.Id)
             .Map(dest => dest.Status, src => src.Status.ToString())
             .Map(dest => dest.CreatedAt, src => src.OrderDate)
-            .Map(dest => dest.Total, src => src.OrderItems.Sum(orderItem => orderItem.UnitPrice * orderItem.Quantity))
+            .Map(dest => dest.Total, src => src.TotalAmount)
             // Raw tracking tokens are returned once by the handler and are never sourced from the entity.
-            .Ignore(dest => dest.TrackingToken);
+            .Ignore(dest => dest.TrackingToken)
+            .Ignore(dest => dest.PaymentUrl!);
     }
 }

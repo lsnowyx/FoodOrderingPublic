@@ -11,4 +11,6 @@ public class GuestCheckoutResponse
     public decimal Total { get; set; }
 
     public string TrackingToken { get; set; } = null!;
+
+    public string? PaymentUrl { get; set; }
 }

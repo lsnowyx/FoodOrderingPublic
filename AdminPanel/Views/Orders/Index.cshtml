@@ -64,6 +64,7 @@
     }
     @foreach (var o in orders.Items)
     {
+        var paymentBadgeClass = o.IsPaid ? "bg-primary" : "bg-secondary";
         <tr>
             <td>@o.Id</td>
             <td>@o.CustomerId</td>
@@ -81,14 +82,8 @@
                 }
             </td>
             <td>
-                @if (o.IsPaid)
-                {
-                    <span class="badge bg-primary">Paid</span>
-                }
-                else
-                {
-                    <span class="badge bg-secondary">Unpaid</span>
-                }
+                <span class="badge @paymentBadgeClass">@o.PaymentStatus</span>
+                <div class="small text-muted">@o.PaymentMethod</div>
             </td>
             <td>@o.DeliveryAddress</td>
             <td>@(o.DeliveredAt?.ToLocalTime().ToString("g") ?? "-")</td>

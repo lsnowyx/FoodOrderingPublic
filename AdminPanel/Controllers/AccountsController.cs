@@ -35,7 +35,7 @@ public class AccountsController : Controller
         }
 
         var request = model.Adapt<CreateAdminAccountRequest>();
-        if (!TryValidateModel(request))
+        if (!this.ValidateRequestDto(request))
         {
             return View(model);
         }

@@ -33,18 +33,31 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
         if (!IsValidStatusTransition(current, newStatus))
             throw new ArgumentException($"Invalid status transition from {current} to {newStatus}");
 
-        if (!order.IsPaid
-            && newStatus is OrderStatus.Preparing
-                or OrderStatus.OutForDelivery
-                or OrderStatus.Delivered)
+        if (!order.IsPaid && newStatus == OrderStatus.Delivered)
         {
             throw new InvalidOperationException(
                 $"Unpaid orders cannot move to {newStatus}.");
         }
 
+        if (newStatus == OrderStatus.Paid
+            && order.PaymentMethod == PaymentMethod.OnlineCard
+            && (!order.IsPaid || order.PaymentStatus != PaymentStatus.Paid))
+        {
+            throw new InvalidOperationException("Online card payments must be confirmed by Stripe.");
+        }
+
+        if (newStatus == OrderStatus.Paid
+            && order.PaymentMethod != PaymentMethod.CashOnDelivery
+            && order.PaymentMethod != PaymentMethod.OnlineCard)
+        {
+            throw new InvalidOperationException("Only orders with a known payment method can be marked as paid.");
+        }
+
+        var now = DateTime.UtcNow;
+
         if (newStatus == OrderStatus.Delivered)
         {
-            await _orderCompletionService.MarkDeliveredAsync(order, DateTime.UtcNow, cancellationToken);
+            await _orderCompletionService.MarkDeliveredAsync(order, now, cancellationToken);
         }
         else
         {
@@ -52,13 +65,15 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
             if (newStatus == OrderStatus.Paid)
             {
                 order.IsPaid = true;
+                order.PaymentStatus = PaymentStatus.Paid;
+                order.PaidAt ??= now;
             }
 
-            order.UpdatedAt = DateTime.UtcNow;
+            order.UpdatedAt = now;
         }
 
         await _repo.UpdateAsync(order, cancellationToken);
-        await _repo.RecalculateTotalsAsync(order, cancellationToken);
+        _repo.RecalculateTotalsAsync(order);
         await _repo.SaveChangesAsync(cancellationToken);
         return OrderResponseFactory.Create(order);
     }

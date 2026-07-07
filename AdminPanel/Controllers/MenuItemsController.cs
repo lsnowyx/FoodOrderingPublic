@@ -85,7 +85,7 @@ public class MenuItemsController : Controller
         decimal? quantity)
     {
         var request = new CreateMenuItemIngredientRequest(ingredientId, quantity);
-        if (!TryValidateForRedirect(request, "Ingredient and quantity are required."))
+        if (!this.ValidateRequestDtoForRedirect(request, "Ingredient and quantity are required."))
         {
             return RedirectToAction(nameof(Details), new { id });
         }
@@ -105,7 +105,7 @@ public class MenuItemsController : Controller
         decimal? quantity)
     {
         var request = new UpdateMenuItemIngredientRequest(quantity);
-        if (!TryValidateForRedirect(request, "Quantity is required."))
+        if (!this.ValidateRequestDtoForRedirect(request, "Quantity is required."))
         {
             return RedirectToAction(nameof(Details), new { id });
         }
@@ -144,7 +144,7 @@ public class MenuItemsController : Controller
     public async Task<IActionResult> AddPicture(Guid id, MenuItemPictureViewModel model)
     {
         var request = model.Adapt<MenuItemPictureRequest>();
-        if (!TryValidateForRedirect(request, "Image file is required."))
+        if (!this.ValidateRequestDtoForRedirect(request, "Image file is required."))
         {
             return RedirectToAction(nameof(Details), new { id });
         }
@@ -177,7 +177,7 @@ public class MenuItemsController : Controller
         if (!ModelState.IsValid) return View(model);
 
         var request = model.Adapt<MenuItemPictureRequest>();
-        if (!TryValidateModel(request)) return View(model);
+        if (!this.ValidateRequestDto(request)) return View(model);
 
         try
         {
@@ -232,7 +232,7 @@ public class MenuItemsController : Controller
         }
 
         var request = model.Adapt<CreateMenuItemRequest>();
-        if (!TryValidateModel(request))
+        if (!this.ValidateRequestDto(request))
         {
             await ApplyCategoryNameAsync(model);
             return View(model);
@@ -276,7 +276,7 @@ public class MenuItemsController : Controller
         }
 
         var request = model.Adapt<UpdateMenuItemRequest>();
-        if (!TryValidateModel(request))
+        if (!this.ValidateRequestDto(request))
         {
             await ApplyCategoryNameAsync(model);
             return View(model);
@@ -373,23 +373,6 @@ public class MenuItemsController : Controller
 
         var category = await _mediator.Send(new GetCategoryByIdQuery { Id = menuItem.CategoryId });
         menuItem.CategoryName = category?.Name;
-    }
-
-    private bool TryValidateForRedirect(object request, string fallbackMessage)
-    {
-        if (TryValidateModel(request))
-        {
-            return true;
-        }
-
-        var message = ModelState.Values
-            .SelectMany(value => value.Errors)
-            .Select(error => error.ErrorMessage)
-            .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
-            ?? fallbackMessage;
-
-        MvcErrorHelper.SetErrorMessage(TempData, message);
-        return false;
     }
 
     private static Select2LookupResponseViewModel ToSelect2Response(

@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.Common;
 using MediatR;
 
@@ -9,11 +10,16 @@ public class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategoryComman
 {
     private readonly ICategoriesRepository _repo;
     private readonly ICloudinaryService cloudinaryService;
+    private readonly ICacheService cacheService;
 
-    public DeleteCategoryCommandHandler(ICategoriesRepository repo, ICloudinaryService cloudinaryService)
+    public DeleteCategoryCommandHandler(
+        ICategoriesRepository repo,
+        ICloudinaryService cloudinaryService,
+        ICacheService cacheService)
     {
         _repo = repo;
         this.cloudinaryService = cloudinaryService;
+        this.cacheService = cacheService;
     }
 
     public async Task<OperationResponse> Handle(DeleteCategoryCommand request, CancellationToken cancellationToken)
@@ -25,6 +31,9 @@ public class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategoryComman
 
         await _repo.DeleteAsync(request.Id, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
+        await CacheInvalidationHelper.InvalidateCategoryCachesAsync(
+            cacheService,
+            cancellationToken);
 
         var imageDeleted = true;
         if (!string.IsNullOrWhiteSpace(publicId))

@@ -39,8 +39,11 @@ namespace Persistence.Extensions
             services.AddTransient<IMenuItemPicturesRepository, MenuItemPicturesRepository>();
             services.AddTransient<IOrdersRepository, OrdersRepository>();
             services.AddTransient<IOrderTrackingLinksRepository, OrderTrackingLinksRepository>();
+            services.AddTransient<IDeliveryTrackingSessionsRepository, DeliveryTrackingSessionsRepository>();
             services.AddTransient<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<IApplicationTransaction, EfApplicationTransaction>();
+            services.AddTransient<IPaymentAttemptRepository, PaymentAttemptRepository>();
+            services.AddTransient<IProcessedPaymentEventRepository, ProcessedPaymentEventRepository>();
             return services;
         }
     }

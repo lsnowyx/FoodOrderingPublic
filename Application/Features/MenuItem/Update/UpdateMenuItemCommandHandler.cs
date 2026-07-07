@@ -1,4 +1,6 @@
 using Application.Abstractions.Repositories;
+using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.MenuItem;
 using Mapster;
 using MediatR;
@@ -9,11 +11,16 @@ public class UpdateMenuItemCommandHandler : IRequestHandler<UpdateMenuItemComman
 {
     private readonly IMenuItemsRepository _repo;
     private readonly Application.Abstractions.Repositories.ICategoriesRepository _categoryRepo;
+    private readonly ICacheService _cacheService;
 
-    public UpdateMenuItemCommandHandler(IMenuItemsRepository repo, Application.Abstractions.Repositories.ICategoriesRepository categoryRepo)
+    public UpdateMenuItemCommandHandler(
+        IMenuItemsRepository repo,
+        Application.Abstractions.Repositories.ICategoriesRepository categoryRepo,
+        ICacheService cacheService)
     {
         _repo = repo;
         _categoryRepo = categoryRepo;
+        _cacheService = cacheService;
     }
 
     public async Task<MenuItemResponse> Handle(UpdateMenuItemCommand request, CancellationToken cancellationToken)
@@ -34,6 +41,9 @@ public class UpdateMenuItemCommandHandler : IRequestHandler<UpdateMenuItemComman
 
         await _repo.UpdateAsync(existing, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
+        await CacheInvalidationHelper.InvalidateMenuItemCachesAsync(
+            _cacheService,
+            cancellationToken);
 
         return existing.Adapt<MenuItemResponse>();
     }

@@ -27,6 +27,22 @@ public interface IOrdersRepository
         bool? isPaid,
         CancellationToken cancellationToken = default);
     Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Order>> GetOrdersByCustomerIdPagedAsync(
+        Guid customerId,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+    Task<int> CountOrdersByCustomerIdAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default);
+    Task<Order?> GetCustomerOrderDetailsAsync(
+        Guid orderId,
+        Guid customerId,
+        CancellationToken cancellationToken = default);
+    Task<Order?> GetOrderForCustomerPaymentRetryAsync(
+        Guid orderId,
+        Guid customerId,
+        CancellationToken cancellationToken = default);
     Task<Order?> GetActiveAssignedToOrderManagerAsync(Guid orderManagerId, CancellationToken cancellationToken = default);
     Task<bool> TryAssignAsync(
         Guid orderId,
@@ -43,5 +59,5 @@ public interface IOrdersRepository
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 
     // Additional helpers
-    Task RecalculateTotalsAsync(Order order, CancellationToken cancellationToken = default);
+    void RecalculateTotalsAsync(Order order);
 }

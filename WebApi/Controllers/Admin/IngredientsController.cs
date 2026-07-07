@@ -5,6 +5,7 @@ using Application.Features.Ingredient.Delete;
 using Application.Features.Ingredient.Get;
 using Application.Features.Ingredient.GetById;
 using Application.Features.Ingredient.Lookup;
+using Application.Features.Ingredient.NutritionSearch;
 using Application.Features.Ingredient.Update;
 using Common.Constants;
 using Mapster;
@@ -52,6 +53,20 @@ public class IngredientsController : ControllerBase
         {
             SearchTerm = searchTerm,
             Page = page,
+            PageSize = pageSize
+        });
+
+        return Ok(result);
+    }
+
+    [HttpGet("nutrition-search")]
+    public async Task<IActionResult> NutritionSearch(
+        [FromQuery] string query,
+        [FromQuery] int pageSize = 10)
+    {
+        var result = await _mediator.Send(new SearchNutritionQuery
+        {
+            Query = query,
             PageSize = pageSize
         });
 

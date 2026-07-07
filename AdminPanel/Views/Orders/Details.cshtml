@@ -14,7 +14,8 @@
             <strong>Assigned At:</strong> @(Model.AssignedAt?.ToLocalTime().ToString("g") ?? "-")<br />
             <strong>Order Date:</strong> @Model.OrderDate.ToLocalTime().ToString("g")<br />
             <strong>Status:</strong> <span class="badge bg-secondary">@Model.Status</span><br />
-            <strong>Payment:</strong> @(Model.IsPaid ? "Paid" : "Unpaid")<br />
+            <strong>Payment:</strong> @Model.PaymentStatus (@Model.PaymentMethod)<br />
+            <strong>Paid At:</strong> @(Model.PaidAt?.ToLocalTime().ToString("g") ?? "-")<br />
             <strong>Delivery Address:</strong> @Model.DeliveryAddress<br />
             <strong>Delivered At:</strong> @(Model.DeliveredAt?.ToLocalTime().ToString("g") ?? "-")
         </p>

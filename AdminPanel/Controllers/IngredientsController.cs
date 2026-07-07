@@ -6,6 +6,7 @@ using Application.Features.Ingredient.Create;
 using Application.Features.Ingredient.Delete;
 using Application.Features.Ingredient.Get;
 using Application.Features.Ingredient.GetById;
+using Application.Features.Ingredient.NutritionSearch;
 using Application.Features.Ingredient.Update;
 using Common.Constants;
 using Mapster;
@@ -60,13 +61,32 @@ public class IngredientsController : Controller
         return View(new IngredientViewModel());
     }
 
+    [HttpGet]
+    public async Task<IActionResult> NutritionSearch(string query, int pageSize = 10)
+    {
+        try
+        {
+            var response = await _mediator.Send(new SearchNutritionQuery
+            {
+                Query = query,
+                PageSize = pageSize
+            });
+
+            return Json(response);
+        }
+        catch (Exception exception) when (MvcErrorHelper.IsFormBusinessException(exception))
+        {
+            return BadRequest(MvcErrorHelper.GetDisplayMessage(exception));
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(IngredientViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
 
         var request = model.Adapt<CreateIngredientRequest>();
-        if (!TryValidateModel(request)) return View(model);
+        if (!this.ValidateRequestDto(request)) return View(model);
 
         try
         {
@@ -97,7 +117,7 @@ public class IngredientsController : Controller
         if (!ModelState.IsValid) return View(model);
 
         var request = model.Adapt<UpdateIngredientRequest>();
-        if (!TryValidateModel(request)) return View(model);
+        if (!this.ValidateRequestDto(request)) return View(model);
 
         try
         {

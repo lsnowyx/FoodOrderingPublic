@@ -1,5 +1,7 @@
 using Application.DTOs.Tracking;
 using Application.Features.Tracking.Get;
+using Application.Features.Tracking.GetMap;
+using Application.Features.Tracking.PaymentUrlStatus;
 using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +25,26 @@ public class TrackingController : ControllerBase
     public async Task<IActionResult> Get([FromQuery] GetOrderTrackingRequest request)
     {
         var result = await _mediator.Send(request.Adapt<GetOrderTrackingQuery>());
+
+        return Ok(result);
+    }
+
+    [HttpGet("map")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetMap([FromQuery] GetOrderTrackingRequest request)
+    {
+        var result = await _mediator.Send(new GetDeliveryTrackingMapQuery
+        {
+            Token = request.Token
+        });
+
+        return Ok(result);
+    }
+
+    [HttpPost("guest-orders/payment-link")]
+    public async Task<IActionResult> GetOrCreatePaymentLink([FromQuery] GetOrderTrackingRequest request)
+    {
+        var result = await _mediator.Send(new PaymentUrlStatusOrderTrackingCommand(request.Token));
 
         return Ok(result);
     }

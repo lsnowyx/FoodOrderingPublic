@@ -21,6 +21,8 @@ public class Order
 
     public bool IsPaid { get; set; }
 
+    public decimal TotalAmount { get; set; }
+
     public string? DeliveryAddress { get; set; }
 
     public double? DeliveryLatitude { get; set; }
@@ -28,6 +30,15 @@ public class Order
     public DateTime? DeliveredAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
+
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.CashOnDelivery;
+
+    public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
+
+    public DateTime? PaidAt { get; set; }
+
+    public List<PaymentAttempt> PaymentAttempts { get; set; } = new List<PaymentAttempt>();
     public List<OrderItem> OrderItems { get; set; } = new();
     public List<OrderTrackingLink> TrackingLinks { get; set; } = new();
+    public List<DeliveryTrackingSession> DeliveryTrackingSessions { get; set; } = new();
 }

@@ -1,3 +1,4 @@
+using Common.Constants;
 using System.ComponentModel.DataAnnotations;
 
 namespace Application.DTOs.Checkout;
@@ -6,7 +7,7 @@ public class GuestCheckoutItemRequest : IValidatableObject
 {
     public Guid MenuItemId { get; set; }
 
-    [Range(1, int.MaxValue)]
+    [Range(1, OrderValidationConstants.MaxItemQuantity)]
     public int Quantity { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

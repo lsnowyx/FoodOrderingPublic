@@ -14,9 +14,18 @@ else
 {
     var isClosed = Model.Status == nameof(Common.Enums.OrderStatus.Delivered)
         || Model.Status == nameof(Common.Enums.OrderStatus.Cancelled);
-    var canStartDelivery = Model.IsPaid
-        && (Model.Status == nameof(Common.Enums.OrderStatus.Paid)
+    var canStartDelivery = !isClosed
+        && (Model.Status == nameof(Common.Enums.OrderStatus.Pending)
+            || Model.Status == nameof(Common.Enums.OrderStatus.Paid)
             || Model.Status == nameof(Common.Enums.OrderStatus.Preparing));
+    var canMarkDelivered = Model.Status == nameof(Common.Enums.OrderStatus.OutForDelivery)
+        && Model.IsPaid
+        && !isClosed;
+    var needsPaymentBeforeFinish = Model.Status == nameof(Common.Enums.OrderStatus.OutForDelivery)
+        && !Model.IsPaid
+        && !isClosed;
+    var isCashPayment = Model.PaymentMethod == nameof(Common.Enums.PaymentMethod.CashOnDelivery);
+    var paymentBadgeClass = Model.IsPaid ? "bg-primary" : "bg-secondary";
 
     <div class="card mb-3">
         <div class="card-body">
@@ -27,7 +36,8 @@ else
                 <strong>Assigned At:</strong> @(Model.AssignedAt?.ToLocalTime().ToString("g") ?? "-")<br />
                 <strong>Order Date:</strong> @Model.OrderDate.ToLocalTime().ToString("g")<br />
                 <strong>Status:</strong> <span class="badge bg-secondary">@Model.Status</span><br />
-                <strong>Payment:</strong> @(Model.IsPaid ? "Paid" : "Unpaid")<br />
+                <strong>Payment:</strong> @Model.PaymentStatus (@Model.PaymentMethod)<br />
+                <strong>Paid At:</strong> @(Model.PaidAt?.ToLocalTime().ToString("g") ?? "-")<br />
                 <strong>Delivery Address:</strong> @Model.DeliveryAddress<br />
                 <strong>Delivered At:</strong> @(Model.DeliveredAt?.ToLocalTime().ToString("g") ?? "-")
             </p>
@@ -44,7 +54,7 @@ else
             </form>
         }
 
-        @if (Model.Status == nameof(Common.Enums.OrderStatus.OutForDelivery))
+        @if (canMarkDelivered)
         {
             <form asp-action="MarkDelivered" method="post" class="d-inline" onsubmit="return confirm('Mark order as delivered?');">
                 <input type="hidden" name="id" value="@Model.Id" />
@@ -52,19 +62,30 @@ else
                 @Html.AntiForgeryToken()
             </form>
         }
+        else if (needsPaymentBeforeFinish)
+        {
+            <div class="alert alert-warning mt-2 mb-0">
+                Payment must be collected/marked before finishing delivery.
+            </div>
+        }
     </div>
 
     <div class="card mb-3">
         <div class="card-body">
             <h5>Payment</h5>
-            <form asp-controller="Orders" asp-action="UpdatePayment" method="post" onsubmit="return confirm('Are you sure this order is paid?');">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="isPaid" value="true" />
-                <button class="btn btn-sm btn-success" disabled="@(isClosed || Model.IsPaid)">
-                    @(Model.IsPaid ? "Paid" : "Mark as Paid")
-                </button>
-                @Html.AntiForgeryToken()
-            </form>
+            @if (isCashPayment && !Model.IsPaid && !isClosed)
+            {
+                <form asp-controller="Orders" asp-action="UpdatePayment" method="post" onsubmit="return confirm('Are you sure this order is paid?');">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="isPaid" value="true" />
+                    <button class="btn btn-sm btn-success">Mark as Paid</button>
+                    @Html.AntiForgeryToken()
+                </form>
+            }
+            else
+            {
+                <span class="badge @paymentBadgeClass">@Model.PaymentStatus</span>
+            }
         </div>
     </div>
 

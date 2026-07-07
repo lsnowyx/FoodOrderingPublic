@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.Category;
 using Mapster;
 using MediatR;
@@ -10,11 +11,16 @@ public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryComman
 {
     private readonly ICategoriesRepository _repo;
     private readonly ICloudinaryService _cloudinaryService;
+    private readonly ICacheService _cacheService;
 
-    public UpdateCategoryCommandHandler(ICategoriesRepository repo, ICloudinaryService cloudinaryService)
+    public UpdateCategoryCommandHandler(
+        ICategoriesRepository repo,
+        ICloudinaryService cloudinaryService,
+        ICacheService cacheService)
     {
         _repo = repo;
         _cloudinaryService = cloudinaryService;
+        _cacheService = cacheService;
     }
 
     public async Task<CategoryResponse> Handle(UpdateCategoryCommand request, CancellationToken cancellationToken)
@@ -37,6 +43,9 @@ public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryComman
             {
                 await _repo.UpdateAsync(existing, cancellationToken);
                 await _repo.SaveChangesAsync(cancellationToken);
+                await CacheInvalidationHelper.InvalidateCategoryCachesAsync(
+                    _cacheService,
+                    cancellationToken);
             }
             catch
             {
@@ -71,6 +80,9 @@ public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryComman
 
         await _repo.UpdateAsync(existing, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
+        await CacheInvalidationHelper.InvalidateCategoryCachesAsync(
+            _cacheService,
+            cancellationToken);
         return existing.Adapt<CategoryResponse>();
     }
 }

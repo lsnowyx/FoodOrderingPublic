@@ -28,6 +28,9 @@ public class MarkOrderDeliveredCommandHandler : IRequestHandler<MarkOrderDeliver
         if (order.Status != OrderStatus.OutForDelivery)
             throw new InvalidOperationException("Only orders out for delivery can be marked as delivered.");
 
+        if (!order.IsPaid)
+            throw new InvalidOperationException("Unpaid orders cannot be marked as delivered.");
+
         await _orderCompletionService.MarkDeliveredAsync(order, DateTime.UtcNow, cancellationToken);
 
         await _repo.UpdateAsync(order, cancellationToken);

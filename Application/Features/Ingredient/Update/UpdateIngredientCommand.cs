@@ -17,7 +17,7 @@ public sealed class UpdateIngredientCommand : IRequest<IngredientResponse>
     [StringLength(50)]
     public string BaseUnit { get; set; } = null!;
 
-    [Range(typeof(decimal), "0", "99999999999999.9999")]
+    [Range(typeof(decimal), "0", "99999999999999.9999", ParseLimitsInInvariantCulture = true)]
     public decimal UnitCost { get; set; }
 
     [StringLength(500)]

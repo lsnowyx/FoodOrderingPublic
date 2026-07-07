@@ -1,6 +1,7 @@
 using Application.Abstractions.Persistence;
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.Ingredient;
 using Mapster;
 using MediatR;
@@ -12,15 +13,18 @@ public class UpdateIngredientCommandHandler : IRequestHandler<UpdateIngredientCo
     private readonly IIngredientsRepository _repo;
     private readonly IMenuItemCostService _menuItemCostService;
     private readonly IApplicationTransaction _transaction;
+    private readonly ICacheService _cacheService;
 
     public UpdateIngredientCommandHandler(
         IIngredientsRepository repo,
         IMenuItemCostService menuItemCostService,
-        IApplicationTransaction transaction)
+        IApplicationTransaction transaction,
+        ICacheService cacheService)
     {
         _repo = repo;
         _menuItemCostService = menuItemCostService;
         _transaction = transaction;
+        _cacheService = cacheService;
     }
 
     public async Task<IngredientResponse> Handle(UpdateIngredientCommand request, CancellationToken cancellationToken)
@@ -42,6 +46,9 @@ public class UpdateIngredientCommandHandler : IRequestHandler<UpdateIngredientCo
             await _repo.SaveChangesAsync(transactionCancellationToken);
             await _menuItemCostService.RecalculateMenuItemsUsingIngredientAsync(
                 existing.Id,
+                transactionCancellationToken);
+            await CacheInvalidationHelper.InvalidateIngredientCachesAsync(
+                _cacheService,
                 transactionCancellationToken);
 
             return existing.Adapt<IngredientResponse>();

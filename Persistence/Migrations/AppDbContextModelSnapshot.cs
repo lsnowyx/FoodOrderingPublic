@@ -127,6 +127,76 @@ namespace Persistence.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("Domain.Entities.DeliveryTrackingSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ArrivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("CurrentLatitude")
+                        .HasPrecision(18, 12)
+                        .HasColumnType("decimal(18,12)");
+
+                    b.Property<decimal>("CurrentLongitude")
+                        .HasPrecision(18, 12)
+                        .HasColumnType("decimal(18,12)");
+
+                    b.Property<decimal>("DestinationLatitude")
+                        .HasPrecision(18, 12)
+                        .HasColumnType("decimal(18,12)");
+
+                    b.Property<decimal>("DestinationLongitude")
+                        .HasPrecision(18, 12)
+                        .HasColumnType("decimal(18,12)");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Progress")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal>("StartLatitude")
+                        .HasPrecision(18, 12)
+                        .HasColumnType("decimal(18,12)");
+
+                    b.Property<decimal>("StartLongitude")
+                        .HasPrecision(18, 12)
+                        .HasColumnType("decimal(18,12)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UpdateIntervalSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("IX_DeliveryTrackingSessions_OrderId");
+
+                    b.HasIndex(new[] { "OrderId" }, "IX_DeliveryTrackingSessions_OrderId_InProgress")
+                        .IsUnique()
+                        .HasFilter("[Status] = 1");
+
+                    b.ToTable("DeliveryTrackingSessions");
+                });
+
             modelBuilder.Entity("Domain.Entities.GuestCustomer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -312,8 +382,21 @@ namespace Persistence.Migrations
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -398,6 +481,101 @@ namespace Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("OrderTrackingLinks");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PaymentAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StripeCheckoutSessionId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("StripeCheckoutUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("PaymentAttempts");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ProcessedPaymentEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PaymentAttemptId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ProviderEventId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("RawStatus")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("PaymentAttemptId");
+
+                    b.HasIndex("Provider", "ProviderEventId")
+                        .IsUnique();
+
+                    b.ToTable("ProcessedPaymentEvents");
                 });
 
             modelBuilder.Entity("Domain.Entities.Request", b =>
@@ -672,6 +850,17 @@ namespace Persistence.Migrations
                     b.Navigation("MenuItem");
                 });
 
+            modelBuilder.Entity("Domain.Entities.DeliveryTrackingSession", b =>
+                {
+                    b.HasOne("Domain.Entities.Order", "Order")
+                        .WithMany("DeliveryTrackingSessions")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("Domain.Entities.MenuItem", b =>
                 {
                     b.HasOne("Domain.Entities.Category", "Category")
@@ -767,6 +956,34 @@ namespace Persistence.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PaymentAttempt", b =>
+                {
+                    b.HasOne("Domain.Entities.Order", "Order")
+                        .WithMany("PaymentAttempts")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ProcessedPaymentEvent", b =>
+                {
+                    b.HasOne("Domain.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.PaymentAttempt", "PaymentAttempt")
+                        .WithMany()
+                        .HasForeignKey("PaymentAttemptId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Order");
+
+                    b.Navigation("PaymentAttempt");
+                });
+
             modelBuilder.Entity("Domain.Entities.Request", b =>
                 {
                     b.HasOne("Domain.Entities.User", "Client")
@@ -860,7 +1077,11 @@ namespace Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entities.Order", b =>
                 {
+                    b.Navigation("DeliveryTrackingSessions");
+
                     b.Navigation("OrderItems");
+
+                    b.Navigation("PaymentAttempts");
 
                     b.Navigation("TrackingLinks");
                 });

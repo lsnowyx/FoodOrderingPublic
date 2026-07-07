@@ -19,6 +19,9 @@ builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddPresentation(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddFoodOrderingAuthorization();
+builder.Services.AddHangfireBackgroundProcessing(builder.Configuration);
+builder.Services.AddDeliverySimulationScheduler();
+builder.Services.AddDeliverySimulationJobWorker();
 
 builder.Services.Configure<List<SeedUser>>
     (builder.Configuration.GetSection("SeedUsers"));
@@ -79,6 +82,7 @@ app.UseMiddleware<AuditMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<WebApi.Hubs.DeliveryTrackingHub>(DeliveryTrackingHubConstants.Path);
 
 app.UseExceptionHandler();
 

@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.MenuItemPicture;
 using Mapster;
 using MediatR;
@@ -11,12 +12,18 @@ public class CreateMenuItemPictureCommandHandler : IRequestHandler<CreateMenuIte
     private readonly IMenuItemPicturesRepository _repo;
     private readonly IMenuItemsRepository _menuRepo;
     private readonly ICloudinaryService cloudinaryService;
+    private readonly ICacheService cacheService;
 
-    public CreateMenuItemPictureCommandHandler(IMenuItemPicturesRepository repo, IMenuItemsRepository menuRepo, ICloudinaryService cloudinaryService)
+    public CreateMenuItemPictureCommandHandler(
+        IMenuItemPicturesRepository repo,
+        IMenuItemsRepository menuRepo,
+        ICloudinaryService cloudinaryService,
+        ICacheService cacheService)
     {
         _repo = repo;
         _menuRepo = menuRepo;
         this.cloudinaryService = cloudinaryService;
+        this.cacheService = cacheService;
     }
 
     public async Task<MenuItemPictureResponse> Handle(CreateMenuItemPictureCommand request, CancellationToken cancellationToken)
@@ -39,6 +46,9 @@ public class CreateMenuItemPictureCommandHandler : IRequestHandler<CreateMenuIte
         {
             await _repo.AddAsync(toAdd, cancellationToken);
             await _repo.SaveChangesAsync(cancellationToken);
+            await CacheInvalidationHelper.InvalidateMenuItemCachesAsync(
+                cacheService,
+                cancellationToken);
         }
         catch
         {

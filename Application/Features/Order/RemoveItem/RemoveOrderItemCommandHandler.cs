@@ -25,7 +25,7 @@ public class RemoveOrderItemCommandHandler : IRequestHandler<RemoveOrderItemComm
         if (item == null) throw new KeyNotFoundException("Order item not found");
 
         order.OrderItems.Remove(item);
-        await _repo.RecalculateTotalsAsync(order, cancellationToken);
+        _repo.RecalculateTotalsAsync(order);
         await _repo.UpdateAsync(order, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
         return OrderResponseFactory.Create(order);

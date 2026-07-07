@@ -121,6 +121,11 @@ public sealed class AuditMiddleware
             return true;
         }
 
+        if (path.StartsWithSegments("/api/payments/stripe/webhook"))
+        {
+            return true;
+        }
+
         return false;
     }
 

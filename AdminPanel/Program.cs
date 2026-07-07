@@ -4,8 +4,10 @@ using Application.Extensions;
 using Common.Constants;
 using Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Persistence.Extensions;
+using System.Globalization;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +21,8 @@ builder.Services.AddControllersWithViews(options =>
 builder.Services.AddApplication(typeof(Program).Assembly);
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddHangfireBackgroundJobClient(builder.Configuration);
+builder.Services.AddDeliverySimulationScheduler();
 
 // Cookie authentication remains the default authentication mechanism for MVC.
 builder.Services.AddAuthentication(options =>
@@ -53,6 +57,9 @@ builder.Services.AddFoodOrderingAuthorization();
 
 var app = builder.Build();
 
+var adminPanelCulture = CultureInfo.GetCultureInfo("en-US");
+var supportedCultures = new[] { adminPanelCulture };
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -66,6 +73,13 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture(adminPanelCulture),
+    SupportedCultures = supportedCultures,
+    SupportedUICultures = supportedCultures
+});
 
 app.UseRouting();
 

@@ -21,8 +21,11 @@ public class AppDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
     public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<GuestCustomer> GuestCustomers => Set<GuestCustomer>();
     public DbSet<Order> Orders => Set<Order>();
+    public DbSet<PaymentAttempt> PaymentAttempts => Set<PaymentAttempt>();
+    public DbSet<ProcessedPaymentEvent> ProcessedPaymentEvents => Set<ProcessedPaymentEvent>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderTrackingLink> OrderTrackingLinks => Set<OrderTrackingLink>();
+    public DbSet<DeliveryTrackingSession> DeliveryTrackingSessions => Set<DeliveryTrackingSession>();
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 

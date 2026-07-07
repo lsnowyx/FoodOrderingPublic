@@ -1,5 +1,6 @@
 using AdminPanel.Constants;
 using AdminPanel.Models.Auth;
+using AdminPanel.Services;
 using Application.DTOs.Request;
 using Application.Features.Account.Login;
 using Common.Constants;
@@ -39,7 +40,7 @@ public class AuthController : Controller
         }
 
         var request = model.Adapt<LoginRequest>();
-        if (!TryValidateModel(request))
+        if (!this.ValidateRequestDto(request))
         {
             return View(model);
         }

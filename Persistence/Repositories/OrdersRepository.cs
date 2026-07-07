@@ -80,6 +80,55 @@ public class OrdersRepository : IOrdersRepository
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Order>> GetOrdersByCustomerIdPagedAsync(
+        Guid customerId,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        return await GetCustomerOrdersQuery(customerId)
+            .OrderByDescending(order => order.OrderDate)
+            .ThenByDescending(order => order.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountOrdersByCustomerIdAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Orders
+            .AsNoTracking()
+            .Where(order => order.UserId == customerId)
+            .CountAsync(cancellationToken);
+    }
+
+    public Task<Order?> GetCustomerOrderDetailsAsync(
+        Guid orderId,
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        return GetCustomerOrdersQuery(customerId)
+            .FirstOrDefaultAsync(
+                order => order.Id == orderId,
+                cancellationToken);
+    }
+
+    public Task<Order?> GetOrderForCustomerPaymentRetryAsync(
+        Guid orderId,
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Orders
+            .Include(order => order.PaymentAttempts)
+            .Include(order => order.User)
+            .Include(order => order.GuestCustomer)
+            .FirstOrDefaultAsync(
+                order => order.Id == orderId && order.UserId == customerId,
+                cancellationToken);
+    }
+
     public async Task<Order?> GetActiveAssignedToOrderManagerAsync(Guid orderManagerId, CancellationToken cancellationToken = default)
     {
         return await _context.Orders
@@ -117,9 +166,8 @@ public class OrdersRepository : IOrdersRepository
 
         var affectedRows = await _context.Orders
             .Where(order => order.Id == orderId
-                && order.AssignedOrderManagerId == null
-                && order.Status != OrderStatus.Delivered
-                && order.Status != OrderStatus.Cancelled)
+                && order.AssignedOrderManagerId == null)
+            .Where(IsAvailable())
             .ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(order => order.AssignedOrderManagerId, (Guid?)orderManagerId)
@@ -207,11 +255,9 @@ public class OrdersRepository : IOrdersRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public Task RecalculateTotalsAsync(Order order, CancellationToken cancellationToken = default)
+    public void RecalculateTotalsAsync(Order order)
     {
-        // For now totals are implicit: sum of OrderItems (Quantity * UnitPrice)
-        // If you store a Total on Order, set it here. Keeping method for extensibility.
-        return Task.CompletedTask;
+        order.TotalAmount = order.OrderItems.Sum(orderItem => orderItem.UnitPrice * orderItem.Quantity);
     }
 
     private IQueryable<Order> GetOrdersQuery()
@@ -229,11 +275,25 @@ public class OrdersRepository : IOrdersRepository
         return GetOrdersQuery().Where(IsAvailable());
     }
 
+    private IQueryable<Order> GetCustomerOrdersQuery(Guid customerId)
+    {
+        return _context.Orders
+            .AsNoTracking()
+            .Where(order => order.UserId == customerId)
+            .Include(order => order.OrderItems)
+                .ThenInclude(orderItem => orderItem.MenuItem)
+            .Include(order => order.PaymentAttempts);
+    }
+
     private static System.Linq.Expressions.Expression<Func<Order, bool>> IsAvailable()
     {
         return order => order.AssignedOrderManagerId == null
             && order.Status != OrderStatus.Delivered
-            && order.Status != OrderStatus.Cancelled;
+            && order.Status != OrderStatus.Cancelled
+            && (order.PaymentMethod == PaymentMethod.CashOnDelivery
+                || (order.PaymentMethod == PaymentMethod.OnlineCard
+                    && order.IsPaid
+                    && order.PaymentStatus == PaymentStatus.Paid));
     }
 
     private static IQueryable<Order> ApplyFilters(

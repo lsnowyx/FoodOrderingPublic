@@ -17,7 +17,10 @@ public class OrderTrackingLinksRepository : IOrderTrackingLinksRepository
     public async Task<OrderTrackingLink?> GetByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
     {
         return await _context.OrderTrackingLinks
-            .Include(trackingLink => trackingLink.Order)
+            .Include(x => x.Order).ThenInclude(o => o.GuestCustomer)
+            .Include(x => x.Order).ThenInclude(o => o.PaymentAttempts)
+            .Include(x => x.Order).ThenInclude(o => o.OrderItems)
+                .ThenInclude(orderItem => orderItem.MenuItem)
             .FirstOrDefaultAsync(trackingLink => trackingLink.TokenHash == tokenHash, cancellationToken);
     }
 

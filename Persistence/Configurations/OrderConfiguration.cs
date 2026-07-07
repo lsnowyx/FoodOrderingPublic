@@ -10,6 +10,9 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     {
         builder.HasKey(order => order.Id);
 
+        builder.Property(order => order.TotalAmount)
+            .HasPrecision(18, 2);
+
         builder.HasOne(order => order.GuestCustomer)
             .WithMany()
             .HasForeignKey(order => order.GuestCustomerId)
@@ -23,6 +26,11 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasMany(order => order.OrderItems)
             .WithOne(orderItem => orderItem.Order)
             .HasForeignKey(orderItem => orderItem.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(order => order.PaymentAttempts)
+            .WithOne(paymentAttempt => paymentAttempt.Order)
+            .HasForeignKey(paymentAttempt => paymentAttempt.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

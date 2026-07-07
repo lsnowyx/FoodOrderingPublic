@@ -12,7 +12,7 @@ public sealed record UpdateIngredientRequest(
     string BaseUnit,
 
     [param: Required]
-    [param: Range(typeof(decimal), "0", "99999999999999.9999")]
+    [param: Range(typeof(decimal), "0", "99999999999999.9999", ParseLimitsInInvariantCulture = true)]
     decimal? UnitCost,
 
     [param: StringLength(500)]

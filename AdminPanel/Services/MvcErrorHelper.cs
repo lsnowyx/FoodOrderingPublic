@@ -22,6 +22,16 @@ public static class MvcErrorHelper
         tempData[TempDataKeys.ErrorMessage] = message;
     }
 
+    public static void SetFirstModelStateErrorMessage(
+        ITempDataDictionary tempData,
+        ModelStateDictionary modelState,
+        string fallbackMessage)
+    {
+        tempData[TempDataKeys.ErrorMessage] = GetFirstModelStateErrorMessage(
+            modelState,
+            fallbackMessage);
+    }
+
     public static bool IsFormBusinessException(Exception exception)
     {
         return exception is ValidationException
@@ -40,5 +50,16 @@ public static class MvcErrorHelper
             UnauthorizedAccessException => "You are not authorized to perform this action.",
             _ => "An unexpected error occurred."
         };
+    }
+
+    private static string GetFirstModelStateErrorMessage(
+        ModelStateDictionary modelState,
+        string fallbackMessage)
+    {
+        return modelState.Values
+            .SelectMany(value => value.Errors)
+            .Select(error => error.ErrorMessage)
+            .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
+            ?? fallbackMessage;
     }
 }

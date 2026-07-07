@@ -85,7 +85,7 @@ public class CategoriesController : Controller
         if (!ModelState.IsValid) return View(model);
 
         var request = model.Adapt<CreateCategoryRequest>();
-        if (!TryValidateModel(request)) return View(model);
+        if (!this.ValidateRequestDto(request)) return View(model);
 
         try
         {
@@ -116,7 +116,7 @@ public class CategoriesController : Controller
         if (!ModelState.IsValid) return View(model);
 
         var request = model.Adapt<UpdateCategoryRequest>();
-        if (!TryValidateModel(request)) return View(model);
+        if (!this.ValidateRequestDto(request)) return View(model);
 
         try
         {

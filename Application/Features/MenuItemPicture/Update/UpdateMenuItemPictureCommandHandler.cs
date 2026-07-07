@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.MenuItemPicture;
 using Mapster;
 using MediatR;
@@ -11,12 +12,18 @@ public class UpdateMenuItemPictureCommandHandler : IRequestHandler<UpdateMenuIte
     private readonly IMenuItemPicturesRepository _repo;
     private readonly IMenuItemsRepository _menuRepo;
     private readonly ICloudinaryService cloudinaryService;
+    private readonly ICacheService cacheService;
 
-    public UpdateMenuItemPictureCommandHandler(IMenuItemPicturesRepository repo, IMenuItemsRepository menuRepo, ICloudinaryService cloudinaryService)
+    public UpdateMenuItemPictureCommandHandler(
+        IMenuItemPicturesRepository repo,
+        IMenuItemsRepository menuRepo,
+        ICloudinaryService cloudinaryService,
+        ICacheService cacheService)
     {
         _repo = repo;
         _menuRepo = menuRepo;
         this.cloudinaryService = cloudinaryService;
+        this.cacheService = cacheService;
     }
 
     public async Task<MenuItemPictureResponse> Handle(UpdateMenuItemPictureCommand request, CancellationToken cancellationToken)
@@ -40,6 +47,9 @@ public class UpdateMenuItemPictureCommandHandler : IRequestHandler<UpdateMenuIte
         {
             await _repo.UpdateAsync(pic, cancellationToken);
             await _repo.SaveChangesAsync(cancellationToken);
+            await CacheInvalidationHelper.InvalidateMenuItemCachesAsync(
+                cacheService,
+                cancellationToken);
         }
         catch
         {

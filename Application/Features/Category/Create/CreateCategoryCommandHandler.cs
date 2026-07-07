@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.Category;
 using Mapster;
 using MediatR;
@@ -10,11 +11,16 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
 {
     private readonly ICategoriesRepository _repo;
     private readonly ICloudinaryService _cloudinaryService;
+    private readonly ICacheService _cacheService;
 
-    public CreateCategoryCommandHandler(ICategoriesRepository repo, ICloudinaryService cloudinaryService)
+    public CreateCategoryCommandHandler(
+        ICategoriesRepository repo,
+        ICloudinaryService cloudinaryService,
+        ICacheService cacheService)
     {
         _repo = repo;
         _cloudinaryService = cloudinaryService;
+        _cacheService = cacheService;
     }
 
     public async Task<CategoryResponse> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
@@ -34,6 +40,9 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
         {
             await _repo.AddAsync(toAdd, cancellationToken);
             await _repo.SaveChangesAsync(cancellationToken);
+            await CacheInvalidationHelper.InvalidateCategoryCachesAsync(
+                _cacheService,
+                cancellationToken);
         }
         catch
         {

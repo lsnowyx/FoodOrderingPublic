@@ -1,5 +1,6 @@
 using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
+using Application.Caching;
 using Application.DTOs.Common;
 using MediatR;
 
@@ -9,13 +10,16 @@ public class DeleteMenuItemCommandHandler : IRequestHandler<DeleteMenuItemComman
 {
     private readonly IMenuItemsRepository _repo;
     private readonly ICloudinaryService _cloudinaryService;
+    private readonly ICacheService _cacheService;
 
     public DeleteMenuItemCommandHandler(
         IMenuItemsRepository repo,
-        ICloudinaryService cloudinaryService)
+        ICloudinaryService cloudinaryService,
+        ICacheService cacheService)
     {
         _repo = repo;
         _cloudinaryService = cloudinaryService;
+        _cacheService = cacheService;
     }
 
     public async Task<OperationResponse> Handle(DeleteMenuItemCommand request, CancellationToken cancellationToken)
@@ -31,6 +35,9 @@ public class DeleteMenuItemCommandHandler : IRequestHandler<DeleteMenuItemComman
 
         await _repo.DeleteAsync(request.Id, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
+        await CacheInvalidationHelper.InvalidateMenuItemCachesAsync(
+            _cacheService,
+            cancellationToken);
 
         var allPicturesDeleted = true;
         foreach (var publicId in picturePublicIds)

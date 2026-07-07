@@ -1,38 +1,24 @@
-using Application.Abstractions.Repositories;
+using Application.Abstractions.Services;
 using Application.DTOs.Order;
-using Common.Enums;
 using MediatR;
 
 namespace Application.Features.Order.StartDelivery;
 
 public class StartDeliveryCommandHandler : IRequestHandler<StartDeliveryCommand, OrderResponse>
 {
-    private readonly IOrdersRepository _repo;
+    private readonly IStartDeliveryService _startDeliveryService;
 
-    public StartDeliveryCommandHandler(IOrdersRepository repo)
+    public StartDeliveryCommandHandler(IStartDeliveryService startDeliveryService)
     {
-        _repo = repo;
+        _startDeliveryService = startDeliveryService;
     }
 
     public async Task<OrderResponse> Handle(StartDeliveryCommand request, CancellationToken cancellationToken)
     {
-        var order = await _repo.GetByIdAsync(request.Id, cancellationToken);
-        if (order == null) throw new KeyNotFoundException("Order not found");
-
-        OrderAssignmentGuard.EnsureAssignedToOrderManager(order, request.OrderManagerId);
-        OrderAssignmentGuard.EnsureEditable(order);
-
-        if (!order.IsPaid)
-            throw new InvalidOperationException("Unpaid orders cannot start delivery.");
-
-        if (order.Status != OrderStatus.Paid && order.Status != OrderStatus.Preparing)
-            throw new InvalidOperationException("Only paid or preparing orders can start delivery.");
-
-        order.Status = OrderStatus.OutForDelivery;
-        order.UpdatedAt = DateTime.UtcNow;
-
-        await _repo.UpdateAsync(order, cancellationToken);
-        await _repo.SaveChangesAsync(cancellationToken);
+        var order = await _startDeliveryService.StartAsync(
+            request.Id,
+            request.OrderManagerId,
+            cancellationToken);
 
         return OrderResponseFactory.Create(order);
     }

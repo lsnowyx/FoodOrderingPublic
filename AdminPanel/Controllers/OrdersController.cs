@@ -84,14 +84,16 @@ public class OrdersController : Controller
     {
         if (!ModelState.IsValid)
         {
-            AddFirstModelStateErrorToTempData("Payment status is invalid.");
+            MvcErrorHelper.SetFirstModelStateErrorMessage(
+                TempData,
+                ModelState,
+                "Payment status is invalid.");
             return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
         }
 
         var request = model.Adapt<UpdateOrderPaymentRequest>();
-        if (!TryValidateModel(request))
+        if (!this.ValidateRequestDtoForRedirect(request, "Payment status is invalid."))
         {
-            AddFirstModelStateErrorToTempData("Payment status is invalid.");
             return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
         }
 
@@ -110,14 +112,16 @@ public class OrdersController : Controller
     {
         if (!ModelState.IsValid)
         {
-            AddFirstModelStateErrorToTempData("Order status is invalid.");
+            MvcErrorHelper.SetFirstModelStateErrorMessage(
+                TempData,
+                ModelState,
+                "Order status is invalid.");
             return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
         }
 
         var request = model.Adapt<UpdateOrderStatusRequest>();
-        if (!TryValidateModel(request))
+        if (!this.ValidateRequestDtoForRedirect(request, "Order status is invalid."))
         {
-            AddFirstModelStateErrorToTempData("Order status is invalid.");
             return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
         }
 
@@ -130,14 +134,4 @@ public class OrdersController : Controller
         return RedirectToAction(nameof(DeliveriesController.Index), "Deliveries");
     }
 
-    private void AddFirstModelStateErrorToTempData(string fallbackMessage)
-    {
-        var message = ModelState.Values
-            .SelectMany(value => value.Errors)
-            .Select(error => error.ErrorMessage)
-            .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
-            ?? fallbackMessage;
-
-        MvcErrorHelper.SetErrorMessage(TempData, message);
-    }
 }

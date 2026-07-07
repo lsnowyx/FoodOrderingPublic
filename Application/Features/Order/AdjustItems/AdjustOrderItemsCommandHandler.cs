@@ -21,6 +21,10 @@ public class AdjustOrderItemsCommandHandler : IRequestHandler<AdjustOrderItemsCo
         OrderAssignmentGuard.EnsureEditable(order);
         if (request.OrderManagerId != null) throw new UnauthorizedAccessException("Order managers cannot change order item quantities.");
 
+        OrderItemQuantityGuard.EnsureValidOrderShape(
+            request.Items,
+            item => item.Quantity);
+
         foreach (var item in request.Items)
         {
             var orderItem = order.OrderItems.FirstOrDefault(oi => oi.Id == item.ItemId);
@@ -28,7 +32,7 @@ public class AdjustOrderItemsCommandHandler : IRequestHandler<AdjustOrderItemsCo
             orderItem.Quantity = item.Quantity;
         }
 
-        await _repo.RecalculateTotalsAsync(order, cancellationToken);
+        _repo.RecalculateTotalsAsync(order);
         await _repo.UpdateAsync(order, cancellationToken);
         await _repo.SaveChangesAsync(cancellationToken);
         return OrderResponseFactory.Create(order);

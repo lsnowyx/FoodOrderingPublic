@@ -4,6 +4,10 @@ using Application.Features.Order.AdjustItems;
 using Application.Features.Order.Create;
 using Application.Features.Order.Get;
 using Application.Features.Order.GetAssignedById;
+using Application.Features.Order.GetCustomerDeliveryTrackingMap;
+using Application.Features.Order.GetCustomerOrderDetails;
+using Application.Features.Order.GetCustomerOrders;
+using Application.Features.Order.GetCustomerPaymentLink;
 using Application.Features.Order.GetAvailable;
 using Application.Features.Order.GetMyDelivery;
 using Application.Features.Order.MarkDelivered;
@@ -66,6 +70,63 @@ public class OrdersController : ControllerBase
             Status = status,
             IsPaid = isPaid
         });
+        return Ok(result);
+    }
+
+    [HttpGet("my")]
+    [Authorize(AuthorizationPolicyConstants.USER_POLICY)]
+    public async Task<IActionResult> GetMyOrders(
+        [FromQuery] int page = PaginationParameters.DefaultPage,
+        [FromQuery] int pageSize = PaginationParameters.DefaultPageSize)
+    {
+        var result = await _mediator.Send(new GetCustomerOrdersQuery
+        {
+            CustomerId = User.GetUserId(),
+            Page = page,
+            PageSize = pageSize
+        });
+
+        return Ok(result);
+    }
+
+    [HttpGet("my/{orderId:guid}")]
+    [Authorize(AuthorizationPolicyConstants.USER_POLICY)]
+    public async Task<IActionResult> GetMyOrderById(Guid orderId)
+    {
+        var result = await _mediator.Send(new GetCustomerOrderDetailsQuery
+        {
+            OrderId = orderId,
+            CustomerId = User.GetUserId()
+        });
+
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
+    [HttpGet("my/{orderId:guid}/map")]
+    [Authorize(AuthorizationPolicyConstants.USER_POLICY)]
+    public async Task<IActionResult> GetMyOrderMap(Guid orderId)
+    {
+        var result = await _mediator.Send(new GetCustomerDeliveryTrackingMapQuery
+        {
+            OrderId = orderId,
+            CustomerId = User.GetUserId()
+        });
+
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
+
+    [HttpPost("my/{orderId:guid}/payment-link")]
+    [Authorize(AuthorizationPolicyConstants.USER_POLICY)]
+    public async Task<IActionResult> GetMyOrderPaymentLink(Guid orderId)
+    {
+        var result = await _mediator.Send(new GetCustomerPaymentLinkCommand
+        {
+            OrderId = orderId,
+            CustomerId = User.GetUserId()
+        });
+
         return Ok(result);
     }
 
@@ -170,6 +231,6 @@ public class OrdersController : ControllerBase
         cmd.UserId = User.GetUserId();
 
         var created = await _mediator.Send(cmd);
-        return CreatedAtAction(nameof(GetById), new { orderId = created.Id }, created);
+        return CreatedAtAction(nameof(GetById), new { orderId = created.OrderId }, created);
     }
 }

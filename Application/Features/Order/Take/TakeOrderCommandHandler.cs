@@ -53,6 +53,18 @@ public class TakeOrderCommandHandler : IRequestHandler<TakeOrderCommand, OrderRe
                 throw new InvalidOperationException("Cancelled orders cannot be taken.");
             }
 
+            if (unavailableOrder.PaymentMethod == PaymentMethod.OnlineCard
+                && (!unavailableOrder.IsPaid || unavailableOrder.PaymentStatus != PaymentStatus.Paid))
+            {
+                throw new InvalidOperationException("Online card orders cannot be taken until Stripe confirms payment.");
+            }
+
+            if (unavailableOrder.PaymentMethod != PaymentMethod.CashOnDelivery
+                && unavailableOrder.PaymentMethod != PaymentMethod.OnlineCard)
+            {
+                throw new InvalidOperationException("Orders with an unknown payment method cannot be taken.");
+            }
+
             throw new InvalidOperationException("Order could not be assigned. Please try again.");
         }
 
