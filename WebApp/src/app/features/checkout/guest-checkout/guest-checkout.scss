@@ -1,0 +1,245 @@
+.checkout-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.page-heading {
+  margin-bottom: 1.5rem;
+}
+
+.page-heading a,
+.empty-checkout a,
+.submit-error a {
+  color: #2457a6;
+}
+
+.page-heading h1 {
+  margin-bottom: 0;
+}
+
+.checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+}
+
+form,
+.checkout-summary {
+  border: 1px solid #dddddd;
+  border-radius: 0.75rem;
+  background: white;
+}
+
+form {
+  padding: 1.25rem;
+}
+
+fieldset {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 1.25rem;
+  padding: 1rem;
+  border: 1px solid #dddddd;
+  border-radius: 0.5rem;
+}
+
+legend {
+  padding: 0 0.4rem;
+  font-weight: 700;
+}
+
+label {
+  margin-top: 0.5rem;
+  font-weight: 700;
+}
+
+input[type='text'],
+input[type='email'],
+input[type='tel'],
+input[type='search'] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem;
+  border: 1px solid #999999;
+  border-radius: 0.35rem;
+  font: inherit;
+}
+
+input.ng-invalid.ng-touched {
+  border-color: #9a2525;
+}
+
+.address-search-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.address-search-controls button {
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 0.35rem;
+  color: white;
+  background: #2457a6;
+  font: inherit;
+  cursor: pointer;
+}
+
+.address-search-controls button:disabled {
+  background: #777777;
+  cursor: wait;
+}
+
+.field-help,
+.field-error,
+.lookup-message,
+.selected-address {
+  margin: 0.2rem 0;
+}
+
+.field-help {
+  color: #666666;
+  font-size: 0.9rem;
+}
+
+.field-error,
+.lookup-error,
+.validation-summary,
+.submit-error {
+  color: #8a1c1c;
+}
+
+.selected-address {
+  padding: 0.65rem;
+  border-radius: 0.35rem;
+  color: #246b36;
+  background: #edf8f0;
+}
+
+.suggestions {
+  max-height: 15rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid #dddddd;
+  border-radius: 0.35rem;
+  list-style: none;
+}
+
+.suggestions li + li {
+  border-top: 1px solid #dddddd;
+}
+
+.suggestions button {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.75rem;
+  border: 0;
+  background: white;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.suggestions button:hover,
+.suggestions button:focus-visible {
+  background: #f3f4f6;
+}
+
+.suggestions small {
+  color: #666666;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+}
+
+.validation-summary,
+.submit-error {
+  padding: 0.8rem;
+  border-radius: 0.4rem;
+  background: #fdecec;
+}
+
+.submit-error p {
+  margin-top: 0;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 0.8rem;
+  border: 0;
+  border-radius: 0.4rem;
+  color: white;
+  background: #2457a6;
+  font: inherit;
+  cursor: pointer;
+}
+
+.submit-button:disabled {
+  background: #777777;
+  cursor: wait;
+}
+
+.checkout-summary {
+  padding: 1.25rem;
+}
+
+.checkout-summary h2 {
+  margin-top: 0;
+}
+
+.checkout-summary ul {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0 0 1rem;
+  border-bottom: 1px solid #dddddd;
+  list-style: none;
+}
+
+.checkout-summary li,
+.checkout-summary dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.checkout-summary dl div {
+  padding: 0.55rem 0;
+}
+
+.checkout-summary dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.estimate-note {
+  color: #666666;
+  font-size: 0.9rem;
+}
+
+.empty-checkout {
+  padding: 2rem;
+  border-radius: 0.75rem;
+  background: #f3f4f6;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .checkout-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .address-search-controls {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,60 @@
+<section class="auth-page">
+  <form [formGroup]="registerForm" (ngSubmit)="submit()" novalidate>
+    <h1>Create an account</h1>
+    <p>Register as a customer to keep an order history and track deliveries.</p>
+
+    <label for="register-username">Username</label>
+    <input
+      id="register-username"
+      type="text"
+      formControlName="userName"
+      maxlength="256"
+      autocomplete="username"
+    >
+    @if (showError('userName')) {
+      <p class="field-error">
+        Use only letters, periods, and apostrophes, with no more than 256 characters.
+      </p>
+    }
+
+    <label for="register-password">Password</label>
+    <input
+      id="register-password"
+      type="password"
+      formControlName="password"
+      maxlength="256"
+      autocomplete="new-password"
+    >
+    @if (showError('password')) {
+      <p class="field-error">
+        Use 6–256 characters and include at least one number.
+      </p>
+    }
+
+    <label for="register-confirm-password">Confirm password</label>
+    <input
+      id="register-confirm-password"
+      type="password"
+      formControlName="confirmPassword"
+      maxlength="256"
+      autocomplete="new-password"
+    >
+    @if (showError('confirmPassword')) {
+      <p class="field-error">Confirm your password.</p>
+    } @else if (showPasswordMismatch()) {
+      <p class="field-error">The passwords do not match.</p>
+    }
+
+    @if (registerError()) {
+      <p class="api-error" role="alert">{{ registerError() }}</p>
+    }
+
+    <button type="submit" [disabled]="isSubmitting()">
+      {{ isSubmitting() ? 'Creating account...' : 'Create account' }}
+    </button>
+
+    <p class="auth-switch">
+      Already registered? <a routerLink="/login">Log in</a>
+    </p>
+  </form>
+</section>

@@ -20,7 +20,6 @@ public class DeliveryTrackingSessionsRepository : IDeliveryTrackingSessionsRepos
         CancellationToken cancellationToken = default)
     {
         return _context.DeliveryTrackingSessions
-            .AsNoTracking()
             .FirstOrDefaultAsync(session => session.Id == id, cancellationToken);
     }
 

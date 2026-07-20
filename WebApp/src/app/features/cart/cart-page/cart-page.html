@@ -1,0 +1,96 @@
+<section class="cart-page">
+  <div class="page-heading">
+    <h1>Your cart</h1>
+    <a routerLink="/categories">Continue shopping</a>
+  </div>
+
+  @if (cartStore.isEmpty()) {
+    <div class="empty-cart">
+      <h2>Your cart is empty</h2>
+      <p>Browse the menu and add something you would like to order.</p>
+      <a routerLink="/categories">Browse categories</a>
+    </div>
+  } @else {
+    <div class="cart-layout">
+      <div class="cart-items" aria-label="Cart items">
+        @for (item of cartStore.items(); track item.menuItemId) {
+          <article class="cart-item">
+            @if (item.imageUrl) {
+              <img [src]="item.imageUrl" [alt]="item.name">
+            }
+
+            <div class="item-details">
+              <h2>{{ item.name }}</h2>
+              <p>Unit price: {{ item.unitPrice | number: '1.2-2' }}</p>
+              <p>Calories per unit: {{ item.caloriesPerUnit | number: '1.0-2' }}</p>
+
+              <div class="quantity-controls">
+                <button
+                  type="button"
+                  (click)="decreaseQuantity(item)"
+                  [attr.aria-label]="'Decrease quantity of ' + item.name"
+                >&minus;</button>
+                <span aria-live="polite">{{ item.quantity }}</span>
+                <button
+                  type="button"
+                  (click)="increaseQuantity(item)"
+                  [disabled]="item.quantity >= maxItemQuantity"
+                  [attr.aria-label]="'Increase quantity of ' + item.name"
+                >+</button>
+              </div>
+
+              <div class="line-totals">
+                <span>Line price: {{ item.unitPrice * item.quantity | number: '1.2-2' }}</span>
+                <span>Line calories: {{ item.caloriesPerUnit * item.quantity | number: '1.0-2' }}</span>
+              </div>
+
+              <button
+                class="remove-button"
+                type="button"
+                (click)="removeItem(item)"
+                [attr.aria-label]="'Remove ' + item.name + ' from cart'"
+              >Remove</button>
+            </div>
+          </article>
+        }
+      </div>
+
+      <aside class="order-summary" aria-labelledby="order-summary-title">
+        <h2 id="order-summary-title">Order summary</h2>
+        <dl>
+          <div>
+            <dt>Distinct items</dt>
+            <dd>{{ cartStore.distinctItemCount() }}</dd>
+          </div>
+          <div>
+            <dt>Total quantity</dt>
+            <dd>{{ cartStore.totalQuantity() }}</dd>
+          </div>
+          <div>
+            <dt>Total price</dt>
+            <dd>{{ cartStore.totalPrice() | number: '1.2-2' }}</dd>
+          </div>
+          <div>
+            <dt>Total calories</dt>
+            <dd>{{ cartStore.totalCalories() | number: '1.0-2' }}</dd>
+          </div>
+        </dl>
+
+        <p class="estimate-note">Prices and availability will be confirmed at checkout.</p>
+
+        <button class="clear-button" type="button" (click)="clearCart()">Clear cart</button>
+
+        <div class="checkout-area">
+          @if (authStore.isAuthenticated()) {
+            <a class="checkout-button" routerLink="/checkout/customer">Checkout</a>
+          } @else {
+            <a class="checkout-button" routerLink="/checkout">Guest checkout</a>
+            <a routerLink="/login" [queryParams]="{ returnUrl: '/cart' }">
+              Log in to keep an order history
+            </a>
+          }
+        </div>
+      </aside>
+    </div>
+  }
+</section>

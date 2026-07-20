@@ -1,0 +1,94 @@
+<section class="details-page">
+  <a routerLink="/orders">&larr; Back to My Orders</a>
+
+  @if (orderState$ | async; as state) {
+    @if (state.status === 'loading') {
+      <div class="state-card" role="status">Loading order details...</div>
+    } @else if (state.status === 'error') {
+      <div class="state-card error-state" role="alert">
+        <h1>Order unavailable</h1>
+        <p>{{ state.message }}</p>
+        <button type="button" (click)="retryLoad()">Try again</button>
+      </div>
+    } @else {
+      <div class="title-row">
+        <div><p class="eyebrow">Order</p><h1>#{{ shortOrderNumber(state.data.orderId) }}</h1></div>
+        <span class="status-badge" [class.cancelled]="state.data.orderStatus === 'Cancelled'">
+          {{ orderStatusLabel(state.data.orderStatus) }}
+        </span>
+      </div>
+
+      @if (paymentOpened) {
+        <p class="notice success-message" role="status">
+          Payment opened in a new tab. The backend payment status below remains authoritative.
+        </p>
+      }
+      @if (paymentIssue) {
+        <p class="notice error-state" role="alert">
+          The order was created, but the payment page could not be opened. Use Retry payment below.
+        </p>
+      }
+
+      <div class="details-grid">
+        <article class="panel">
+          <h2>Order information</h2>
+          <dl>
+            <div><dt>Created</dt><dd>{{ state.data.createdAt | date: 'medium' }}</dd></div>
+            <div><dt>Status</dt><dd>{{ orderStatusLabel(state.data.orderStatus) }}</dd></div>
+            <div><dt>Total</dt><dd>{{ state.data.totalAmount | number: '1.2-2' }}</dd></div>
+            @if (state.data.deliveryAddress) {
+              <div><dt>Delivery address</dt><dd>{{ state.data.deliveryAddress }}</dd></div>
+            }
+            @if (state.data.deliveredAt) {
+              <div><dt>Delivered</dt><dd>{{ state.data.deliveredAt | date: 'medium' }}</dd></div>
+            }
+          </dl>
+
+          @if (state.data.orderStatus === 'OutForDelivery') {
+            <a class="primary-link" [routerLink]="['/orders', state.data.orderId, 'tracking']">
+              Track delivery
+            </a>
+          }
+        </article>
+
+        <article class="panel">
+          <h2>Payment</h2>
+          <dl>
+            <div><dt>Method</dt><dd>{{ paymentMethodLabel(state.data.paymentMethod) }}</dd></div>
+            <div><dt>Status</dt><dd>{{ paymentStatusLabel(state.data.paymentStatus) }}</dd></div>
+            @if (state.data.paidAt) {
+              <div><dt>Paid</dt><dd>{{ state.data.paidAt | date: 'medium' }}</dd></div>
+            }
+          </dl>
+          <p>{{ state.data.paymentMessage }}</p>
+
+          @if (state.data.canPayOnlineAgain) {
+            <button
+              type="button"
+              (click)="retryPayment(state.data)"
+              [disabled]="isRetryingPayment()"
+            >{{ isRetryingPayment() ? 'Opening payment...' : 'Retry payment' }}</button>
+          }
+          @if (paymentMessage()) {
+            <p class="success-message" role="status">{{ paymentMessage() }}</p>
+          }
+          @if (paymentError()) {
+            <p class="error-message" role="alert">{{ paymentError() }}</p>
+          }
+        </article>
+      </div>
+
+      <article class="panel items-panel">
+        <h2>Ordered items</h2>
+        <ul>
+          @for (item of state.data.items; track item.menuItemId) {
+            <li>
+              <div><strong>{{ item.menuItemName }}</strong><span>{{ item.quantity }} &times; {{ item.unitPrice | number: '1.2-2' }}</span></div>
+              <div class="line-values"><strong>{{ item.lineTotal | number: '1.2-2' }}</strong><span>{{ item.totalCalories | number: '1.0-0' }} calories</span></div>
+            </li>
+          }
+        </ul>
+      </article>
+    }
+  }
+</section>

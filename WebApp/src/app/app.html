@@ -1,0 +1,28 @@
+<header>
+  <a class="brand" routerLink="/">Food Ordering</a>
+
+  <nav aria-label="Primary navigation">
+    <a routerLink="/">Home</a>
+    <a routerLink="/categories">Categories</a>
+    <a class="cart-link" routerLink="/cart">
+      Cart
+      <span class="cart-badge">{{ cartStore.totalQuantity() }}</span>
+    </a>
+
+    @if (authStore.isAuthenticated()) {
+      <a routerLink="/orders">My Orders</a>
+      <button type="button" class="nav-button" (click)="logout()">Logout</button>
+    } @else {
+      <a routerLink="/login">Login</a>
+      <a routerLink="/register">Register</a>
+    }
+  </nav>
+</header>
+
+<main>
+  <router-outlet></router-outlet>
+</main>
+
+<footer>
+  <p>Food Ordering</p>
+</footer>

@@ -1,0 +1,121 @@
+<section class="checkout-page">
+  <div class="page-heading">
+    <a routerLink="/cart">&larr; Back to cart</a>
+    <h1>Customer checkout</h1>
+  </div>
+
+  @if (cartStore.isEmpty()) {
+    <div class="empty-checkout">
+      <h2>Your cart is empty</h2>
+      <p>Add something from the catalog before starting checkout.</p>
+      <a routerLink="/categories">Browse categories</a>
+    </div>
+  } @else {
+    <div class="checkout-layout">
+      <form [formGroup]="checkoutForm" (ngSubmit)="placeOrder()" novalidate>
+        @if (submitted() && checkoutForm.invalid) {
+          <p class="validation-summary" role="alert">
+            Correct the highlighted fields before placing your order.
+          </p>
+        }
+
+        <fieldset>
+          <legend>Delivery address</legend>
+          <label for="customer-address-search">Search for your address</label>
+          <div class="address-search-controls">
+            <input
+              id="customer-address-search"
+              type="search"
+              formControlName="addressSearch"
+              autocomplete="off"
+              aria-describedby="customer-address-help"
+              (input)="addressTextChanged($event)"
+              (keydown.enter)="searchAddress($event)"
+            >
+            <button
+              type="button"
+              (click)="searchAddress()"
+              [disabled]="isAddressSearching()"
+            >{{ isAddressSearching() ? 'Searching...' : 'Search' }}</button>
+          </div>
+          <p id="customer-address-help" class="field-help">
+            Enter at least three characters, then press Enter or select Search.
+          </p>
+
+          @if (shouldShowError(checkoutForm.controls.addressSearch)) {
+            <p class="field-error">Enter at least three characters before searching.</p>
+          } @else if (shouldShowAddressSelectionError()) {
+            <p class="field-error">Select a valid address from the suggestions.</p>
+          }
+
+          @if (selectedAddress(); as address) {
+            <p class="selected-address" role="status">Selected: {{ address.displayName }}</p>
+          }
+
+          @if (isAddressSearching() && addressSuggestionsVisible()) {
+            <p class="lookup-message" role="status">Searching addresses...</p>
+          } @else if (addressSearchError()) {
+            <p class="lookup-message lookup-error" role="alert">{{ addressSearchError() }}</p>
+          } @else if (addressSuggestionsVisible() && hasCompletedAddressSearch()) {
+            @if (addressSuggestions().length > 0) {
+              <ul class="suggestions" aria-label="Address suggestions">
+                @for (suggestion of addressSuggestions(); track suggestion.displayName + suggestion.latitude + suggestion.longitude) {
+                  <li>
+                    <button type="button" (click)="selectAddress(suggestion)">
+                      <span>{{ suggestion.displayName }}</span>
+                      @if (suggestion.type) {
+                        <small>{{ suggestion.type }}</small>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="lookup-message">No matching addresses were found.</p>
+            }
+          }
+        </fieldset>
+
+        <fieldset>
+          <legend>Payment method</legend>
+          <label class="radio-option">
+            <input type="radio" formControlName="paymentMethod" [value]="paymentMethods.CashOnDelivery">
+            Cash on delivery
+          </label>
+          <label class="radio-option">
+            <input type="radio" formControlName="paymentMethod" [value]="paymentMethods.OnlineCard">
+            Online card payment
+          </label>
+        </fieldset>
+
+        @if (submitError()) {
+          <div class="submit-error" role="alert"><p>{{ submitError() }}</p></div>
+        }
+
+        <button class="submit-button" type="submit" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Placing order...' : 'Place order' }}
+        </button>
+      </form>
+
+      <aside class="checkout-summary" aria-labelledby="customer-summary-title">
+        <h2 id="customer-summary-title">Order summary</h2>
+        <ul>
+          @for (item of cartStore.items(); track item.menuItemId) {
+            <li>
+              <span>{{ item.name }} &times; {{ item.quantity }}</span>
+              <strong>{{ item.unitPrice * item.quantity | number: '1.2-2' }}</strong>
+            </li>
+          }
+        </ul>
+        <dl>
+          <div><dt>Total quantity</dt><dd>{{ cartStore.totalQuantity() }}</dd></div>
+          <div><dt>Estimated price</dt><dd>{{ cartStore.totalPrice() | number: '1.2-2' }}</dd></div>
+          <div><dt>Estimated calories</dt><dd>{{ cartStore.totalCalories() | number: '1.0-2' }}</dd></div>
+        </dl>
+        <p class="estimate-note">
+          The backend confirms current prices, availability, and the final order total.
+        </p>
+      </aside>
+    </div>
+  }
+</section>

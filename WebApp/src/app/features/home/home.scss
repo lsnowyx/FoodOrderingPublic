@@ -1,0 +1,21 @@
+section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.categories-link {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.4rem;
+  color: white;
+  background: #2457a6;
+  text-decoration: none;
+}
+
+.categories-link:hover,
+.categories-link:focus-visible {
+  background: #173f7c;
+}

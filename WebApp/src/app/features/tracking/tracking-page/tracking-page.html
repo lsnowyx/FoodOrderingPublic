@@ -1,0 +1,237 @@
+<section class="tracking-page">
+  <div class="page-heading">
+    <a routerLink="/categories">&larr; Back to categories</a>
+    <h1>Guest order tracking</h1>
+  </div>
+
+  @if (activeToken() === null) {
+    <form class="token-entry" (submit)="submitToken($event)">
+      <h2>Enter your tracking token</h2>
+      <p>Paste the private token supplied when your guest order was created.</p>
+      <label for="tracking-token">Tracking token</label>
+      <div class="token-controls">
+        <input
+          id="tracking-token"
+          type="text"
+          autocomplete="off"
+          [value]="manualToken()"
+          (input)="manualTokenChanged($event)"
+          [attr.aria-invalid]="tokenEntryError() ? true : null"
+          [attr.aria-describedby]="tokenEntryError() ? 'token-entry-error' : null"
+        >
+        <button type="submit">Track order</button>
+      </div>
+      @if (tokenEntryError()) {
+        <p id="token-entry-error" class="error-message" role="alert">
+          {{ tokenEntryError() }}
+        </p>
+      }
+    </form>
+  } @else if (isLoading() && trackingData() === null) {
+    <div class="state-card" role="status">
+      <h2>Loading order</h2>
+      <p>Retrieving the latest order and payment status...</p>
+    </div>
+  } @else if (trackingData() === null) {
+    <div class="state-card error-state" role="alert">
+      <h2>Order tracking unavailable</h2>
+      <p>{{ trackingError() }}</p>
+      <div class="state-actions">
+        <button type="button" (click)="retryInitialLoad()">Try again</button>
+        <button type="button" class="secondary-button" (click)="useAnotherToken()">
+          Enter another token
+        </button>
+      </div>
+    </div>
+  } @else if (trackingData(); as order) {
+    <div class="tracking-toolbar">
+      <div
+        class="connection-state"
+        [class.connected]="deliverySignalR.connectionState() === 'connected'"
+        [class.warning]="deliverySignalR.connectionState() === 'reconnecting' || isPolling()"
+        [class.failed]="deliverySignalR.connectionState() === 'error'"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="connection-dot" aria-hidden="true"></span>
+        <span>{{ connectionLabel() }}</span>
+      </div>
+
+      <button
+        type="button"
+        (click)="refreshStatus()"
+        [disabled]="isRefreshing() || accessUnavailable()"
+      >
+        {{ isRefreshing() ? 'Refreshing...' : 'Refresh status' }}
+      </button>
+    </div>
+
+    @if (deliverySignalR.connectionError()) {
+      <p class="notice warning-notice">
+        {{ deliverySignalR.connectionError() }} Status polling is used while live updates are unavailable.
+      </p>
+    }
+
+    @if (refreshError()) {
+      <p class="notice error-message" role="alert">{{ refreshError() }}</p>
+    }
+
+    <div class="tracking-layout">
+      <div class="tracking-column">
+        <article class="panel order-status-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Order</p>
+              <h2>#{{ shortOrderNumber() }}</h2>
+            </div>
+            <span
+              class="status-badge"
+              [class.cancelled]="order.status === 'Cancelled'"
+              [class.delivered]="order.status === 'Delivered'"
+            >
+              {{ orderStatusLabel(order.status) }}
+            </span>
+          </div>
+
+          <app-order-status-timeline [status]="order.status" />
+
+          <dl class="details-list">
+            <div>
+              <dt>Last order update</dt>
+              <dd>
+                {{ order.updatedAt ? (order.updatedAt | date: 'medium') : 'Not available' }}
+              </dd>
+            </div>
+            @if (order.deliveredAt) {
+              <div>
+                <dt>Delivered</dt>
+                <dd>{{ order.deliveredAt | date: 'medium' }}</dd>
+              </div>
+            }
+          </dl>
+        </article>
+
+        <article class="panel payment-panel">
+          <div class="panel-heading">
+            <h2>Payment</h2>
+            <span class="payment-badge" [class.paid]="order.isPaid">
+              {{ paymentStatusLabel(order.paymentStatus) }}
+            </span>
+          </div>
+          <dl class="details-list">
+            <div>
+              <dt>Method</dt>
+              <dd>{{ paymentMethodLabel(order.paymentMethod) }}</dd>
+            </div>
+          </dl>
+          <p>{{ order.paymentMessage }}</p>
+
+          @if (order.canPayOnlineAgain) {
+            <button
+              type="button"
+              class="primary-button"
+              (click)="retryPayment()"
+              [disabled]="isRetryingPayment()"
+            >
+              {{ isRetryingPayment() ? 'Opening payment...' : 'Retry payment' }}
+            </button>
+          }
+
+          @if (paymentRetryMessage()) {
+            <p class="success-message" role="status">{{ paymentRetryMessage() }}</p>
+          }
+          @if (paymentRetryError()) {
+            <p class="error-message" role="alert">{{ paymentRetryError() }}</p>
+          }
+        </article>
+      </div>
+
+      <article class="panel map-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Delivery</p>
+            <h2>Courier map</h2>
+          </div>
+          @if (mapData(); as currentMap) {
+            <span class="status-badge">
+              {{ trackingStatusLabel(currentMap.trackingStatus) }}
+            </span>
+          }
+        </div>
+
+        @if (isMapLoading() && mapData() === null) {
+          <p class="map-state" role="status">Loading delivery map...</p>
+        } @else if (mapData(); as currentMap) {
+          <app-delivery-map
+            [mapData]="currentMap"
+            [courierLocation]="deliverySignalR.courierLocation()"
+          />
+
+          @if (currentMap.destinationAddress) {
+            <p class="delivery-address">
+              <strong>Delivery address:</strong> {{ currentMap.destinationAddress }}
+            </p>
+          }
+
+          <div class="delivery-metrics">
+            <span>Progress: {{ deliveryProgressPercent() | number: '1.0-0' }}%</span>
+            @if (etaLabel(); as eta) {
+              <span>Estimated arrival: {{ eta }}</span>
+            }
+          </div>
+
+          @if (currentMap.message) {
+            <p class="map-state">{{ currentMap.message }}</p>
+          }
+        } @else {
+          <p class="map-state">Map data is not available yet.</p>
+        }
+
+        @if (mapError()) {
+          <p class="error-message" role="alert">{{ mapError() }}</p>
+        }
+      </article>
+    </div>
+
+    <article class="panel items-panel">
+      <div class="panel-heading">
+        <h2>Ordered items</h2>
+        <strong>{{ order.items.length }} distinct item{{ order.items.length === 1 ? '' : 's' }}</strong>
+      </div>
+
+      @if (order.items.length > 0) {
+        <ul class="order-items">
+          @for (item of order.items; track item.menuItemId) {
+            <li>
+              <div>
+                <strong>{{ item.menuItemName }}</strong>
+                <span>{{ item.quantity }} × {{ item.unitPrice | number: '1.2-2' }}</span>
+              </div>
+              <div class="line-values">
+                <strong>{{ item.lineTotal | number: '1.2-2' }}</strong>
+                <span>{{ item.totalCalories | number: '1.0-0' }} calories</span>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p>No order items were returned.</p>
+      }
+
+      <dl class="order-totals">
+        <div>
+          <dt>Total</dt>
+          <dd>{{ orderTotal() | number: '1.2-2' }}</dd>
+        </div>
+        <div>
+          <dt>Total calories</dt>
+          <dd>{{ orderCalories() | number: '1.0-0' }}</dd>
+        </div>
+      </dl>
+    </article>
+
+    <button type="button" class="text-button" (click)="useAnotherToken()">
+      Track a different order
+    </button>
+  }
+</section>

@@ -31,10 +31,13 @@ public static class PresentationExtension
                 policy
                     .WithOrigins(
                         "https://localhost:7187",
-                        "http://localhost:5030"
+                        "http://localhost:5030",
+                        "http://127.0.0.1:61374",
+                        "http://localhost:61374"
                     )
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         });
         return services;

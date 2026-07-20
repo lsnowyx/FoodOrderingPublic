@@ -9,6 +9,8 @@ public interface IOrderTrackingTokenService
 
     string HashToken(string rawToken);
 
+    string CreatePublicTrackingUrl(string rawToken);
+
     OrderTrackingLink CreateTrackingLink(
         Order order,
         string rawToken,

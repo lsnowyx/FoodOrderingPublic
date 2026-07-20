@@ -1,0 +1,32 @@
+<section class="order-cancelled">
+  <div class="cancel-icon" aria-hidden="true">&times;</div>
+  <h1>Payment was not completed</h1>
+  <p>The payment page was cancelled or closed before payment was completed.</p>
+
+  @if (shortOrderNumber) {
+    <p class="order-reference">Order #{{ shortOrderNumber }}</p>
+  }
+
+  <p>
+    Your order may already exist. It has not been recreated or removed; its backend
+    payment status remains authoritative.
+  </p>
+
+  <div class="actions">
+    @if (trackingReference(); as reference) {
+      <a
+        class="primary-link"
+        [routerLink]="['/track']"
+        [queryParams]="{ token: reference.trackingToken }"
+      >
+        Track your order
+      </a>
+    } @else if (customerOrderId(); as registeredOrderId) {
+      <a class="primary-link" [routerLink]="['/orders', registeredOrderId]">
+        View your order
+      </a>
+    }
+
+    <a class="secondary-link" routerLink="/categories">Continue shopping</a>
+  </div>
+</section>

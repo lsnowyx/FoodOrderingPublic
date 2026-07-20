@@ -1,0 +1,96 @@
+<section>
+  @if (menuItemState$ | async; as state) {
+    @if (state.status === 'loading') {
+      <p class="state-message">Loading menu-item details...</p>
+    } @else if (state.status === 'error') {
+      <a class="navigation-link" routerLink="/categories">&larr; Back to categories</a>
+      <p class="state-message error-message" role="alert">{{ state.message }}</p>
+    } @else {
+      <a
+        class="navigation-link"
+        [routerLink]="['/categories', state.data.category.id, 'menu-items']"
+      >&larr; Back to {{ state.data.category.name }} menu items</a>
+
+      <article class="details-card">
+        <div class="details-summary">
+          <h1>{{ state.data.name }}</h1>
+
+          @if (state.data.description) {
+            <p>{{ state.data.description }}</p>
+          }
+
+          <dl>
+            <div>
+              <dt>Price</dt>
+              <dd>{{ state.data.price | number: '1.2-2' }}</dd>
+            </div>
+            <div>
+              <dt>Calories</dt>
+              <dd>{{ state.data.totalCalories | number: '1.0-0' }}</dd>
+            </div>
+            <div>
+              <dt>Category</dt>
+              <dd>
+                <a [routerLink]="['/categories', state.data.category.id, 'menu-items']">
+                  {{ state.data.category.name }}
+                </a>
+              </dd>
+            </div>
+          </dl>
+
+          <div class="cart-action">
+            <button type="button" (click)="addToCart(state.data)">Add to cart</button>
+            @if (cartFeedback()) {
+              <p class="cart-feedback" role="status" aria-live="polite">
+                {{ cartFeedback() }}
+              </p>
+            }
+          </div>
+        </div>
+
+        <div class="details-section">
+          <h2>Pictures</h2>
+
+          @if (state.data.pictures.length > 0) {
+            <div class="picture-gallery">
+              @for (picture of state.data.pictures; track picture.id) {
+                <figure>
+                  <img [src]="picture.imageUrl" [alt]="picture.caption || state.data.name">
+                  @if (picture.caption) {
+                    <figcaption>{{ picture.caption }}</figcaption>
+                  }
+                </figure>
+              }
+            </div>
+          } @else {
+            <p class="empty-message">No pictures are currently available.</p>
+          }
+        </div>
+
+        <div class="details-section">
+          <h2>Ingredients and allergens</h2>
+
+          @if (state.data.ingredients.length > 0) {
+            <ul class="ingredient-list">
+              @for (ingredient of state.data.ingredients; track ingredient.ingredientId) {
+                <li>
+                  <strong>{{ ingredient.name }}</strong>
+                  @if (ingredient.allergenInfo) {
+                    <p>
+                      <span class="allergen-label">Allergen information:</span>
+                      {{ ingredient.allergenInfo }}
+                    </p>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty-message">No ingredient information is currently available.</p>
+          }
+        </div>
+      </article>
+    }
+  } @else {
+    <p class="state-message">Loading menu-item details...</p>
+  }
+</section>

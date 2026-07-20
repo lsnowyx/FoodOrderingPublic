@@ -1,0 +1,19 @@
+<section class="payment-result">
+  <h1>Payment submitted</h1>
+  <p>
+    Returning from the payment page does not confirm payment by itself.
+    Stripe webhook processing and the backend order state remain authoritative.
+  </p>
+  <p>Your payment confirmation may still be processing.</p>
+
+  @if (guestOrderReference(); as reference) {
+    <a [routerLink]="['/track']" [queryParams]="{ token: reference.trackingToken }">
+      Open guest order tracking
+    </a>
+  } @else if (customerOrderId(); as orderId) {
+    <a [routerLink]="['/orders', orderId]">Open your order</a>
+  } @else {
+    <p>Tracking information is not available in this browser.</p>
+    <a routerLink="/categories">Return to categories</a>
+  }
+</section>

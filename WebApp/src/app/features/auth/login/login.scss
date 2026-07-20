@@ -1,0 +1,87 @@
+.auth-page {
+  display: grid;
+  place-items: center;
+  min-height: 65vh;
+  padding: 2rem 1rem;
+}
+
+form {
+  display: grid;
+  gap: 0.5rem;
+  width: min(100%, 28rem);
+  box-sizing: border-box;
+  padding: 1.5rem;
+  border: 1px solid #dddddd;
+  border-radius: 0.75rem;
+  background: white;
+}
+
+h1 {
+  margin: 0;
+}
+
+label {
+  margin-top: 0.55rem;
+  font-weight: 700;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid #999999;
+  border-radius: 0.35rem;
+  font: inherit;
+}
+
+input.ng-invalid.ng-touched {
+  border-color: #9a2525;
+}
+
+button {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 0;
+  border-radius: 0.4rem;
+  color: white;
+  background: #2457a6;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #777777;
+  cursor: wait;
+}
+
+.field-error,
+.api-error {
+  color: #8a1c1c;
+}
+
+.field-error {
+  margin: 0;
+}
+
+.api-error,
+.success-message {
+  padding: 0.7rem;
+  border-radius: 0.35rem;
+}
+
+.api-error {
+  background: #fdecec;
+}
+
+.success-message {
+  color: #246b36;
+  background: #edf8f0;
+}
+
+.auth-switch {
+  text-align: center;
+}
+
+a {
+  color: #2457a6;
+}

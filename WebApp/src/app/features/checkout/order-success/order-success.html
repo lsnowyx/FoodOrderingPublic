@@ -1,0 +1,31 @@
+<section class="order-success">
+  <div class="success-icon" aria-hidden="true">&#10003;</div>
+  <h1>Your order has been placed</h1>
+  <p>Thank you. Your order was created successfully.</p>
+
+  @if (shortOrderNumber) {
+    <p class="order-reference">Order #{{ shortOrderNumber }}</p>
+  }
+
+  <p>
+    Payment confirmation may still be processing. The backend order status remains authoritative.
+  </p>
+
+  <div class="actions">
+    @if (trackingReference(); as reference) {
+      <a
+        class="primary-link"
+        [routerLink]="['/track']"
+        [queryParams]="{ token: reference.trackingToken }"
+      >
+        Track your order
+      </a>
+    } @else if (customerOrderId(); as registeredOrderId) {
+      <a class="primary-link" [routerLink]="['/orders', registeredOrderId]">
+        View your order
+      </a>
+    }
+
+    <a class="secondary-link" routerLink="/categories">Continue shopping</a>
+  </div>
+</section>

@@ -58,7 +58,6 @@ public sealed class DeliverySimulationJob : IDeliverySimulationJob
 
             ApplySnapshot(session, snapshot, now);
 
-            await _trackingSessionsRepository.UpdateAsync(session, cancellationToken);
             await _trackingSessionsRepository.SaveChangesAsync(cancellationToken);
             await BroadcastLocationUpdatedAsync(session, snapshot, cancellationToken);
 

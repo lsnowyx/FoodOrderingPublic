@@ -1,0 +1,48 @@
+<section class="auth-page">
+  <form [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
+    <h1>Log in</h1>
+    <p>Access your checkout, orders, and delivery tracking.</p>
+
+    @if (registrationComplete) {
+      <p class="success-message" role="status">
+        Registration completed. Log in with your new account.
+      </p>
+    }
+
+    <label for="login-username">Username</label>
+    <input
+      id="login-username"
+      type="text"
+      formControlName="username"
+      maxlength="256"
+      autocomplete="username"
+    >
+    @if (showError('username')) {
+      <p class="field-error">Enter your username.</p>
+    }
+
+    <label for="login-password">Password</label>
+    <input
+      id="login-password"
+      type="password"
+      formControlName="password"
+      maxlength="256"
+      autocomplete="current-password"
+    >
+    @if (showError('password')) {
+      <p class="field-error">Enter your password.</p>
+    }
+
+    @if (loginError()) {
+      <p class="api-error" role="alert">{{ loginError() }}</p>
+    }
+
+    <button type="submit" [disabled]="isSubmitting()">
+      {{ isSubmitting() ? 'Logging in...' : 'Log in' }}
+    </button>
+
+    <p class="auth-switch">
+      Need an account? <a routerLink="/register">Register</a>
+    </p>
+  </form>
+</section>

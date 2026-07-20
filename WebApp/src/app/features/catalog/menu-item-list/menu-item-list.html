@@ -1,0 +1,79 @@
+<section>
+  <a class="navigation-link" routerLink="/categories">&larr; Back to categories</a>
+  <h1>Menu items</h1>
+
+  @if (menuItemsState$ | async; as state) {
+    @if (state.status === 'loading') {
+      <p class="state-message">Loading menu items...</p>
+    } @else if (state.status === 'error') {
+      <p class="state-message error-message" role="alert">{{ state.message }}</p>
+    } @else {
+      <p>
+        Showing {{ state.data.items.length }} of
+        {{ state.data.totalCount }} menu items
+      </p>
+
+      @if (state.data.items.length > 0) {
+        <div class="menu-item-grid">
+          @for (menuItem of state.data.items; track menuItem.id) {
+            <a class="menu-item-link" [routerLink]="['/menu-items', menuItem.id]">
+              <article>
+                @if (menuItem.displayPictureUrl) {
+                  <img [src]="menuItem.displayPictureUrl" [alt]="menuItem.name">
+                }
+
+                <h2>{{ menuItem.name }}</h2>
+
+                @if (menuItem.description) {
+                  <p>{{ menuItem.description }}</p>
+                }
+
+                <p>
+                  <strong>Price:</strong>
+                  {{ menuItem.price | number: '1.2-2' }}
+                </p>
+
+                <p>
+                  <strong>Calories:</strong>
+                  {{ menuItem.totalCalories | number: '1.0-0' }}
+                </p>
+              </article>
+            </a>
+          }
+        </div>
+      } @else if (state.data.totalCount === 0) {
+        <p class="state-message">No menu items are currently available in this category.</p>
+      } @else {
+        <p class="state-message">No menu items were found on this page.</p>
+      }
+
+      @if (state.data.totalPages > 0) {
+        <nav class="pagination" aria-label="Menu item pages">
+          @if (state.data.page > 1) {
+            <a
+              class="pagination-link"
+              [routerLink]="[]"
+              [queryParams]="{ page: state.data.page - 1 }"
+            >Previous</a>
+          } @else {
+            <span class="pagination-link disabled" aria-disabled="true">Previous</span>
+          }
+
+          <span>Page {{ state.data.page }} of {{ state.data.totalPages }}</span>
+
+          @if (state.data.page < state.data.totalPages) {
+            <a
+              class="pagination-link"
+              [routerLink]="[]"
+              [queryParams]="{ page: state.data.page + 1 }"
+            >Next</a>
+          } @else {
+            <span class="pagination-link disabled" aria-disabled="true">Next</span>
+          }
+        </nav>
+      }
+    }
+  } @else {
+    <p class="state-message">Loading menu items...</p>
+  }
+</section>

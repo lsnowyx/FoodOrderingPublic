@@ -44,6 +44,8 @@ public static class InfrastructureExtension
         services.Configure<JwtBearerOptions>(configuration.GetSection("JwtBearer"));
         services.Configure<DeliverySimulationSettings>(
             configuration.GetSection(nameof(DeliverySimulationSettings)));
+        services.Configure<OrderTrackingSettings>(
+            configuration.GetSection(nameof(OrderTrackingSettings)));
         services.Configure<NutritionLookupSettings>(
             configuration.GetSection(nameof(NutritionLookupSettings)));
         services.Configure<EmailSettings>(

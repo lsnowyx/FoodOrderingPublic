@@ -1,0 +1,78 @@
+<section class="orders-page">
+  <div class="page-heading">
+    <a routerLink="/categories">&larr; Continue shopping</a>
+    <h1>My Orders</h1>
+  </div>
+
+  @if (ordersState$ | async; as state) {
+    @if (state.status === 'loading') {
+      <div class="state-card" role="status">Loading your orders...</div>
+    } @else if (state.status === 'error') {
+      <div class="state-card error-state" role="alert">
+        <p>{{ state.message }}</p>
+        <button type="button" (click)="retry()">Try again</button>
+      </div>
+    } @else if (state.data.items.length === 0 && state.data.totalCount === 0) {
+      <div class="state-card">
+        <h2>No orders yet</h2>
+        <p>Your registered orders will appear here.</p>
+        <a routerLink="/categories">Browse categories</a>
+      </div>
+    } @else {
+      <p>Showing {{ state.data.items.length }} of {{ state.data.totalCount }} orders</p>
+
+      @if (state.data.items.length > 0) {
+        <div class="order-grid">
+          @for (order of state.data.items; track order.orderId) {
+            <article class="order-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">Order</p>
+                  <h2>#{{ shortOrderNumber(order.orderId) }}</h2>
+                </div>
+                <span class="status-badge" [class.cancelled]="order.orderStatus === 'Cancelled'">
+                  {{ orderStatusLabel(order.orderStatus) }}
+                </span>
+              </div>
+
+              <dl>
+                <div><dt>Created</dt><dd>{{ order.createdAt | date: 'medium' }}</dd></div>
+                <div><dt>Items</dt><dd>{{ order.itemsCount }}</dd></div>
+                <div><dt>Total</dt><dd>{{ order.totalAmount | number: '1.2-2' }}</dd></div>
+                <div><dt>Payment</dt><dd>{{ paymentStatusLabel(order.paymentStatus) }}</dd></div>
+                <div><dt>Method</dt><dd>{{ paymentMethodLabel(order.paymentMethod) }}</dd></div>
+              </dl>
+
+              <div class="card-actions">
+                <a [routerLink]="['/orders', order.orderId]">View details</a>
+                @if (order.orderStatus === 'OutForDelivery') {
+                  <a [routerLink]="['/orders', order.orderId, 'tracking']">Track delivery</a>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="state-card">No orders were found on this page.</div>
+      }
+
+      @if (state.data.totalPages > 0) {
+        <nav class="pagination" aria-label="Order pages">
+          @if (state.data.page > 1) {
+            <a [routerLink]="[]" [queryParams]="{ page: state.data.page - 1 }">Previous</a>
+          } @else {
+            <span class="disabled" aria-disabled="true">Previous</span>
+          }
+
+          <span>Page {{ state.data.page }} of {{ state.data.totalPages }}</span>
+
+          @if (state.data.page < state.data.totalPages) {
+            <a [routerLink]="[]" [queryParams]="{ page: state.data.page + 1 }">Next</a>
+          } @else {
+            <span class="disabled" aria-disabled="true">Next</span>
+          }
+        </nav>
+      }
+    }
+  }
+</section>

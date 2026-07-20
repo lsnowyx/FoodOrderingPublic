@@ -1,0 +1,115 @@
+<section class="tracking-page">
+  <div class="page-heading">
+    <a routerLink="/orders">&larr; Back to My Orders</a>
+    <h1>Delivery tracking</h1>
+  </div>
+
+  @if (isLoading() && orderData() === null) {
+    <div class="state-card" role="status"><h2>Loading order</h2><p>Retrieving order and delivery status...</p></div>
+  } @else if (orderData() === null) {
+    <div class="state-card error-state" role="alert">
+      <h2>Tracking unavailable</h2>
+      <p>{{ orderError() }}</p>
+      <div class="state-actions">
+        <button type="button" (click)="retryInitialLoad()">Try again</button>
+        <a routerLink="/orders">Return to My Orders</a>
+      </div>
+    </div>
+  } @else if (orderData(); as order) {
+    <div class="tracking-toolbar">
+      <div
+        class="connection-state"
+        [class.connected]="deliverySignalR.connectionState() === 'connected'"
+        [class.warning]="deliverySignalR.connectionState() === 'reconnecting' || isPolling()"
+        [class.failed]="deliverySignalR.connectionState() === 'error'"
+        role="status"
+      >
+        <span class="connection-dot" aria-hidden="true"></span>
+        <span>{{ connectionLabel() }}</span>
+      </div>
+      <button type="button" (click)="refreshStatus()" [disabled]="isRefreshing()">
+        {{ isRefreshing() ? 'Refreshing...' : 'Refresh status' }}
+      </button>
+    </div>
+
+    @if (deliverySignalR.connectionError()) {
+      <p class="notice warning-notice">
+        {{ deliverySignalR.connectionError() }} Polling is used while live updates are unavailable.
+      </p>
+    }
+    @if (refreshError()) {
+      <p class="notice error-message" role="alert">{{ refreshError() }}</p>
+    }
+
+    <div class="tracking-layout">
+      <div class="tracking-column">
+        <article class="panel order-status-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">Order</p><h2>#{{ shortOrderNumber() }}</h2></div>
+            <span class="status-badge" [class.cancelled]="order.orderStatus === 'Cancelled'" [class.delivered]="order.orderStatus === 'Delivered'">
+              {{ orderStatusLabel(order.orderStatus) }}
+            </span>
+          </div>
+          <app-order-status-timeline [status]="order.orderStatus" />
+          <dl class="details-list">
+            <div><dt>Created</dt><dd>{{ order.createdAt | date: 'medium' }}</dd></div>
+            <div><dt>Last update</dt><dd>{{ order.updatedAt ? (order.updatedAt | date: 'medium') : 'Not available' }}</dd></div>
+            @if (order.deliveryAddress) {
+              <div><dt>Address</dt><dd>{{ order.deliveryAddress }}</dd></div>
+            }
+          </dl>
+        </article>
+
+        <article class="panel payment-panel">
+          <div class="panel-heading">
+            <h2>Payment</h2>
+            <span class="payment-badge" [class.paid]="order.isPaid">
+              {{ paymentStatusLabel(order.paymentStatus) }}
+            </span>
+          </div>
+          <p>{{ paymentMethodLabel(order.paymentMethod) }}</p>
+          <p>{{ order.paymentMessage }}</p>
+          @if (order.canPayOnlineAgain) {
+            <a [routerLink]="['/orders', order.orderId]">Open order details to retry payment</a>
+          }
+        </article>
+      </div>
+
+      <article class="panel map-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Delivery</p><h2>Courier map</h2></div>
+          @if (mapData(); as map) {
+            <span class="status-badge">{{ trackingStatusLabel(map.trackingStatus) }}</span>
+          }
+        </div>
+
+        @if (isMapLoading() && mapData() === null) {
+          <p class="map-state" role="status">Loading delivery map...</p>
+        } @else if (mapData(); as map) {
+          <app-delivery-map [mapData]="map" [courierLocation]="deliverySignalR.courierLocation()" />
+          <div class="delivery-metrics">
+            <span>Progress: {{ deliveryProgressPercent() | number: '1.0-0' }}%</span>
+            @if (etaLabel(); as eta) { <span>Estimated arrival: {{ eta }}</span> }
+          </div>
+          @if (map.message) { <p class="map-state">{{ map.message }}</p> }
+        } @else {
+          <p class="map-state">Map data is not available yet.</p>
+        }
+        @if (mapError()) { <p class="error-message" role="alert">{{ mapError() }}</p> }
+      </article>
+    </div>
+
+    <article class="panel items-panel">
+      <div class="panel-heading"><h2>Ordered items</h2><strong>{{ order.items.length }} lines</strong></div>
+      <ul class="order-items">
+        @for (item of order.items; track item.menuItemId) {
+          <li>
+            <div><strong>{{ item.menuItemName }}</strong><span>{{ item.quantity }} &times; {{ item.unitPrice | number: '1.2-2' }}</span></div>
+            <div class="line-values"><strong>{{ item.lineTotal | number: '1.2-2' }}</strong><span>{{ item.totalCalories | number: '1.0-0' }} calories</span></div>
+          </li>
+        }
+      </ul>
+      <dl class="order-totals"><div><dt>Total</dt><dd>{{ order.totalAmount | number: '1.2-2' }}</dd></div></dl>
+    </article>
+  }
+</section>

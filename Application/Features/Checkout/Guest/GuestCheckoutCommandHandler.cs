@@ -182,10 +182,15 @@ public class GuestCheckoutCommandHandler : IRequestHandler<GuestCheckoutCommand,
 
         try
         {
+            var publicTrackingUrl = _trackingTokenService.CreatePublicTrackingUrl(rawTrackingToken);
+
             await _emailService.SendAsync(
                 email,
-                "Your FoodOrdering tracking token",
-                $"Your tracking token is: {rawTrackingToken}",
+                "Your FoodOrdering order tracking",
+                $"Your tracking token is: {rawTrackingToken}"
+                    + Environment.NewLine
+                    + Environment.NewLine
+                    + $"Track your order: {publicTrackingUrl}",
                 cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)

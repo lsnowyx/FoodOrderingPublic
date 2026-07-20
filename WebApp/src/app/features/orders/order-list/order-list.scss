@@ -1,0 +1,119 @@
+.orders-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.page-heading a,
+.state-card a,
+.card-actions a {
+  color: #2457a6;
+}
+
+.order-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.order-card,
+.state-card {
+  padding: 1.2rem;
+  border: 1px solid #dddddd;
+  border-radius: 0.75rem;
+  background: white;
+}
+
+.card-heading,
+.order-card dl div,
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.card-heading {
+  align-items: flex-start;
+}
+
+.card-heading h2,
+.eyebrow {
+  margin: 0;
+}
+
+.eyebrow {
+  color: #666666;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.status-badge {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  color: #2457a6;
+  background: #e9f0fb;
+}
+
+.status-badge.cancelled {
+  color: #8a1c1c;
+  background: #fdecec;
+}
+
+.order-card dl div {
+  padding: 0.35rem 0;
+}
+
+.order-card dd {
+  margin: 0;
+  text-align: right;
+}
+
+.card-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eeeeee;
+}
+
+.state-card {
+  background: #f3f4f6;
+}
+
+.error-state {
+  color: #8a1c1c;
+  background: #fdecec;
+}
+
+button {
+  padding: 0.55rem 0.9rem;
+  border: 0;
+  border-radius: 0.35rem;
+  color: white;
+  background: #2457a6;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.pagination a,
+.pagination .disabled {
+  min-width: 5rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #2457a6;
+  border-radius: 0.4rem;
+  color: #2457a6;
+  text-align: center;
+  text-decoration: none;
+}
+
+.pagination .disabled {
+  border-color: #b8b8b8;
+  color: #777777;
+  background: #f2f2f2;
+}

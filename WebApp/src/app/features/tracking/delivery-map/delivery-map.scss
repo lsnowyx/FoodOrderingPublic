@@ -1,0 +1,47 @@
+.map-container {
+  width: 100%;
+  min-height: 360px;
+  border-radius: 0.55rem;
+  background: #e8eaed;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  color: #555555;
+  font-size: 0.9rem;
+  list-style: none;
+}
+
+.map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.map-legend span {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+}
+
+.restaurant {
+  background: #2457a6;
+}
+
+.destination {
+  background: #35a353;
+}
+
+.courier {
+  background: #f0a53a;
+}
+
+@media (max-width: 600px) {
+  .map-container {
+    min-height: 290px;
+  }
+}

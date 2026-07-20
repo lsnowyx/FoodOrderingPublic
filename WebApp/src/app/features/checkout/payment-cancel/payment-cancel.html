@@ -1,0 +1,19 @@
+<section class="payment-result">
+  <h1>Payment not completed</h1>
+  <p>The payment page was cancelled or closed before payment completed.</p>
+  <p>
+    Your order may already exist. Its tracking information has been preserved,
+    and the order will not be recreated automatically.
+  </p>
+
+  @if (guestOrderReference(); as reference) {
+    <a [routerLink]="['/track']" [queryParams]="{ token: reference.trackingToken }">
+      Open guest order tracking
+    </a>
+  } @else if (customerOrderId(); as orderId) {
+    <a [routerLink]="['/orders', orderId]">Open your order</a>
+  } @else {
+    <p>Tracking information is not available in this browser.</p>
+    <a routerLink="/categories">Return to categories</a>
+  }
+</section>
